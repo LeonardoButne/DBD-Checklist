@@ -339,12 +339,14 @@ input,textarea,select{font-family:inherit;font-size:14px;}
       <div class="tag-input" id="editNameTagInput">
         <input type="text" id="editNameTextInput" placeholder="Escreve e Enter para adicionar...">
       </div>
+      <div class="obs-suggestions" id="editNomeChips"></div>
     </div>
     <div class="field">
       <label>Dispositivos</label>
       <div class="tag-input" id="editDeviceTagInput">
         <input type="text" id="editDeviceTextInput" placeholder="Escreve e Enter para adicionar...">
       </div>
+      <div class="obs-suggestions" id="editDispositivoChips"></div>
     </div>
     <div class="setup-actions">
       <button class="btn btn-primary" id="saveEditMetaBtn">Guardar</button>
@@ -645,6 +647,8 @@ function openEditMetaModal(){
   const currentDevices = (session.meta.dispositivo || '').split('|').map(s=>s.trim()).filter(Boolean);
   editNameTag.setItems(currentNames);
   editDeviceTag.setItems(currentDevices);
+  renderRecentChips('editNomeChips', LS_NOMES, (v)=>editNameTag.add(v));
+  renderRecentChips('editDispositivoChips', LS_DISPOSITIVOS, (v)=>editDeviceTag.add(v));
   document.getElementById('editMetaModalOverlay').classList.remove('hidden');
 }
 document.getElementById('btnEditMeta').addEventListener('click', openEditMetaModal);
