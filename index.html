@@ -269,6 +269,7 @@ input,textarea,select{font-family:inherit;font-size:14px;}
         </div>
         <div class="topbar-actions">
           <button class="icon-btn primary" id="btnShare">🔗 Partilhar</button>
+          <button class="icon-btn" id="btnEditMeta">✏️ Nome/Dispositivos</button>
           <button class="icon-btn" id="btnFreqModal">🏷 Observações</button>
           <button class="icon-btn" id="btnSaveTemplate">💾 Guardar como template</button>
           <button class="icon-btn" id="btnNewChecklist">↺ Nova checklist</button>
@@ -324,6 +325,30 @@ input,textarea,select{font-family:inherit;font-size:14px;}
       <button class="btn btn-primary" id="copyShareLinkBtn">Copiar</button>
     </div>
     <p class="sub" id="shareCreatingMsg" style="margin-top:14px;">A criar checklist partilhada...</p>
+  </div>
+</div>
+
+<!-- ============ EDIT META MODAL ============ -->
+<div id="editMetaModalOverlay" class="modal-overlay hidden">
+  <div class="modal modal-wrap">
+    <button class="modal-close tool-btn" id="closeEditMetaModal">✕</button>
+    <h2>Nome(s) e dispositivo(s)</h2>
+    <p class="sub">Podes adicionar ou remover testers e dispositivos a qualquer momento durante o teste — a mudança é partilhada com os colegas.</p>
+    <div class="field">
+      <label>Nome(s) do tester</label>
+      <div class="tag-input" id="editNameTagInput">
+        <input type="text" id="editNameTextInput" placeholder="Escreve e Enter para adicionar...">
+      </div>
+    </div>
+    <div class="field">
+      <label>Dispositivos</label>
+      <div class="tag-input" id="editDeviceTagInput">
+        <input type="text" id="editDeviceTextInput" placeholder="Escreve e Enter para adicionar...">
+      </div>
+    </div>
+    <div class="setup-actions">
+      <button class="btn btn-primary" id="saveEditMetaBtn">Guardar</button>
+    </div>
   </div>
 </div>
 
@@ -559,6 +584,93 @@ document.getElementById('copyShareLinkBtn').addEventListener('click', ()=>{
     document.execCommand('copy');
     toast('Link copiado ✓');
   }
+});
+
+/* =====================================================
+   EDITAR NOME(S) / DISPOSITIVO(S) A MEIO DO TESTE
+===================================================== */
+// Fábrica genérica de campo de tags (reaproveita o visual .tag-input / .device-chip
+// já usado no onboarding, mas isolada — não mexe nos campos do onboarding).
+function makeTagInput(containerId, textInputId){
+  const container = document.getElementById(containerId);
+  const textInput = document.getElementById(textInputId);
+  let items = [];
+  function render(){
+    [...container.querySelectorAll('.device-chip')].forEach(c=>c.remove());
+    items.forEach((v, idx)=>{
+      const chip = document.createElement('span');
+      chip.className = 'device-chip';
+      const label = document.createElement('span');
+      label.textContent = v;
+      const x = document.createElement('button');
+      x.textContent = '✕';
+      x.title = 'Remover';
+      x.addEventListener('click', ()=>{ items.splice(idx,1); render(); });
+      chip.appendChild(label);
+      chip.appendChild(x);
+      container.insertBefore(chip, textInput);
+    });
+  }
+  function add(val){
+    val = (val||'').trim();
+    if(!val) return;
+    if(!items.some(i=>i.toLowerCase()===val.toLowerCase())) items.push(val);
+    render();
+  }
+  textInput.addEventListener('keydown', (e)=>{
+    if(e.key==='Enter' || e.key===','){
+      e.preventDefault();
+      add(textInput.value);
+      textInput.value = '';
+    } else if(e.key==='Backspace' && textInput.value===''){
+      items.pop();
+      render();
+    }
+  });
+  container.addEventListener('click', (e)=>{ if(e.target===container) textInput.focus(); });
+  return {
+    add,
+    setItems(arr){ items = (arr||[]).slice(); render(); },
+    getItems(){ return items.slice(); },
+    commitPending(){ if(textInput.value.trim()){ add(textInput.value); textInput.value = ''; } }
+  };
+}
+
+const editNameTag = makeTagInput('editNameTagInput', 'editNameTextInput');
+const editDeviceTag = makeTagInput('editDeviceTagInput', 'editDeviceTextInput');
+
+function openEditMetaModal(){
+  if(!session) return;
+  const currentNames = (session.meta.nome || '').split('|').map(s=>s.trim()).filter(Boolean);
+  const currentDevices = (session.meta.dispositivo || '').split('|').map(s=>s.trim()).filter(Boolean);
+  editNameTag.setItems(currentNames);
+  editDeviceTag.setItems(currentDevices);
+  document.getElementById('editMetaModalOverlay').classList.remove('hidden');
+}
+document.getElementById('btnEditMeta').addEventListener('click', openEditMetaModal);
+document.getElementById('closeEditMetaModal').addEventListener('click', ()=>{
+  document.getElementById('editMetaModalOverlay').classList.add('hidden');
+});
+document.getElementById('editMetaModalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'editMetaModalOverlay') e.target.classList.add('hidden');
+});
+document.getElementById('saveEditMetaBtn').addEventListener('click', ()=>{
+  editNameTag.commitPending();
+  editDeviceTag.commitPending();
+  const names = editNameTag.getItems();
+  const devices = editDeviceTag.getItems();
+  if(names.length === 0){
+    toast('Indica pelo menos um nome.');
+    return;
+  }
+  session.meta.nome = names.join(' | ');
+  session.meta.dispositivo = devices.join(' | ');
+  names.forEach(n => rememberValue(LS_NOMES, n));
+  devices.forEach(d => rememberValue(LS_DISPOSITIVOS, d));
+  persistSession();
+  renderApp();
+  document.getElementById('editMetaModalOverlay').classList.add('hidden');
+  toast('Nome(s) e dispositivo(s) actualizados ✓');
 });
 
 let freqObs = loadFreqObs();
@@ -1011,20 +1123,21 @@ function markAllStatus(plat, status){
 function renderMarkAllButtons(){
   const wrap = document.getElementById('markAllWrap');
   wrap.innerHTML = '';
+  const items = allItems();
   session.meta.plataformas.forEach(plat=>{
     const label = plat==='ios' ? 'iOS' : 'Android';
+    const hasMarcacoes = items.some(it => it.status[plat] !== null && it.status[plat] !== undefined);
 
-    const okBtn = document.createElement('button');
-    okBtn.className = 'icon-btn';
-    okBtn.textContent = `✓ Marcar tudo OK · ${label}`;
-    okBtn.addEventListener('click', ()=>markAllStatus(plat, 'OK'));
-    wrap.appendChild(okBtn);
-
-    const clearBtn = document.createElement('button');
-    clearBtn.className = 'icon-btn';
-    clearBtn.textContent = `↺ Desmarcar tudo · ${label}`;
-    clearBtn.addEventListener('click', ()=>markAllStatus(plat, null));
-    wrap.appendChild(clearBtn);
+    const btn = document.createElement('button');
+    btn.className = 'icon-btn';
+    if(hasMarcacoes){
+      btn.textContent = `↺ Desmarcar tudo · ${label}`;
+      btn.addEventListener('click', ()=>markAllStatus(plat, null));
+    } else {
+      btn.textContent = `✓ Marcar tudo OK · ${label}`;
+      btn.addEventListener('click', ()=>markAllStatus(plat, 'OK'));
+    }
+    wrap.appendChild(btn);
   });
 }
 
