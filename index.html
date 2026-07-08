@@ -465,12 +465,25 @@ async function pollRemote(){
 }
 function startPolling(){
   stopPolling();
+  if(document.hidden) return; // não arranca já se a aba estiver em 2º plano — visibilitychange trata disso quando voltar
   pollTimer = setInterval(pollRemote, 2500);
 }
 function stopPolling(){
   if(pollTimer) clearInterval(pollTimer);
   pollTimer = null;
 }
+
+// Pausa o polling quando a aba fica em 2º plano (poupa chamadas desnecessárias
+// à API/Redis) e retoma — com uma actualização imediata — quando volta ao foco.
+document.addEventListener('visibilitychange', ()=>{
+  if(!session || !session.id) return;
+  if(document.hidden){
+    stopPolling();
+  } else {
+    pollRemote();
+    startPolling();
+  }
+});
 
 async function createSharedChecklist(){
   try{
@@ -983,13 +996,16 @@ function renderSummary(){
   renderMarkAllButtons();
 }
 
-function markAllOk(plat){
+function markAllStatus(plat, status){
   const label = plat==='ios' ? 'iOS' : 'Android';
-  if(!confirm(`Marcar todos os itens como OK em ${label}? Isto substitui os estados actuais dessa plataforma.`)) return;
-  allItems().forEach(it => { it.status[plat] = 'OK'; });
+  const msg = status
+    ? `Marcar todos os itens como OK em ${label}? Isto substitui os estados actuais dessa plataforma.`
+    : `Desmarcar todos os itens em ${label} (voltam a "por testar")? Isto substitui os estados actuais dessa plataforma.`;
+  if(!confirm(msg)) return;
+  allItems().forEach(it => { it.status[plat] = status; });
   persistSession();
   renderApp();
-  toast(`Todos os itens marcados como OK (${label}) ✓`);
+  toast(status ? `Todos os itens marcados como OK (${label}) ✓` : `Todos os itens desmarcados (${label}) ✓`);
 }
 
 function renderMarkAllButtons(){
@@ -997,11 +1013,18 @@ function renderMarkAllButtons(){
   wrap.innerHTML = '';
   session.meta.plataformas.forEach(plat=>{
     const label = plat==='ios' ? 'iOS' : 'Android';
-    const btn = document.createElement('button');
-    btn.className = 'icon-btn';
-    btn.textContent = `✓ Marcar tudo OK · ${label}`;
-    btn.addEventListener('click', ()=>markAllOk(plat));
-    wrap.appendChild(btn);
+
+    const okBtn = document.createElement('button');
+    okBtn.className = 'icon-btn';
+    okBtn.textContent = `✓ Marcar tudo OK · ${label}`;
+    okBtn.addEventListener('click', ()=>markAllStatus(plat, 'OK'));
+    wrap.appendChild(okBtn);
+
+    const clearBtn = document.createElement('button');
+    clearBtn.className = 'icon-btn';
+    clearBtn.textContent = `↺ Desmarcar tudo · ${label}`;
+    clearBtn.addEventListener('click', ()=>markAllStatus(plat, null));
+    wrap.appendChild(clearBtn);
   });
 }
 
