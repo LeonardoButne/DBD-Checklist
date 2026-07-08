@@ -88,6 +88,7 @@ input,textarea,select{font-family:inherit;font-size:14px;}
 .sync-status.live{color:var(--ok);}
 .sync-status.saving{color:var(--brand);}
 .sync-status.error{color:var(--notok);}
+.sync-status.paused{color:var(--text-faint);}
 .sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
 .topbar-actions{display:flex;gap:8px;flex-wrap:wrap;}
 .icon-btn{background:var(--surface);border:1.5px solid var(--border-strong);border-radius:var(--radius-sm);padding:9px 14px;font-weight:600;font-size:13px;color:var(--text);display:inline-flex;align-items:center;gap:6px;}
@@ -474,6 +475,7 @@ function isUserTyping(){
 async function pollRemote(){
   if(!session || !session.id) return;
   if(isUserTyping()) return; // não interromper quem está a escrever
+  console.log('[sync] a verificar actualizações...', new Date().toLocaleTimeString());
   try{
     const res = await fetch('/api/checklist?id=' + encodeURIComponent(session.id));
     if(!res.ok) return;
@@ -494,6 +496,7 @@ function startPolling(){
   stopPolling();
   if(document.hidden) return; // não arranca já se a aba estiver em 2º plano — visibilitychange trata disso quando voltar
   pollTimer = setInterval(pollRemote, 2500);
+  console.log('[sync] polling activo (a cada 2.5s)');
 }
 function stopPolling(){
   if(pollTimer) clearInterval(pollTimer);
@@ -506,7 +509,10 @@ document.addEventListener('visibilitychange', ()=>{
   if(!session || !session.id) return;
   if(document.hidden){
     stopPolling();
+    console.log('[sync] aba em 2º plano — polling em pausa');
+    setSyncStatus('paused', 'em pausa (aba em 2º plano)');
   } else {
+    console.log('[sync] aba voltou ao foco — a actualizar e a retomar polling');
     pollRemote();
     startPolling();
   }
