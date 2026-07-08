@@ -1,0 +1,1415 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab Cartões · Checklist QA</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<style>
+:root{
+  --bg:#F3F1F6;
+  --surface:#FFFFFF;
+  --surface-alt:#FBFAFC;
+  --text:#211D2B;
+  --text-muted:#6C6878;
+  --text-faint:#A29DB0;
+  --border:#E5E2EC;
+  --border-strong:#D3CEDE;
+  --brand:#C6005C;
+  --brand-dark:#8C0043;
+  --brand-tint:#FCE6EF;
+  --ok:#1E8E5A;
+  --ok-bg:#E4F5EC;
+  --ok-border:#B9E3CC;
+  --notok:#D6394A;
+  --notok-bg:#FCE9EA;
+  --notok-border:#F3C2C7;
+  --na:#726C82;
+  --na-bg:#EBE9F0;
+  --na-border:#D3CEDE;
+  --pending-bg:#F6F5F9;
+  --radius:12px;
+  --radius-sm:8px;
+  --shadow:0 1px 2px rgba(33,29,43,.04), 0 8px 24px -12px rgba(33,29,43,.12);
+}
+*{box-sizing:border-box;}
+body{margin:0;background:var(--bg);color:var(--text);font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.5;}
+h1,h2,h3,.display{font-family:'Sora',system-ui,sans-serif;}
+button{font-family:inherit;cursor:pointer;}
+input,textarea,select{font-family:inherit;font-size:14px;}
+.hidden{display:none !important;}
+.app-shell{max-width:1040px;margin:0 auto;padding:28px 20px 80px;}
+
+/* ---------- Setup screen ---------- */
+.setup-wrap{max-width:640px;margin:6vh auto 0;}
+.brand-mark{display:flex;align-items:center;gap:10px;margin-bottom:28px;}
+.brand-dot{width:12px;height:12px;border-radius:50%;background:var(--brand);}
+.brand-mark span{font-family:'Sora';font-weight:700;letter-spacing:.02em;color:var(--text-muted);font-size:13px;text-transform:uppercase;}
+.setup-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:32px;box-shadow:var(--shadow);}
+.setup-card h1{font-size:24px;margin:0 0 4px;}
+.setup-card p.lead{color:var(--text-muted);margin:0 0 26px;font-size:14px;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-weight:600;font-size:12.5px;color:var(--text-muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.03em;}
+.field input[type=text],.field input[type=date]{width:100%;padding:10px 12px;border:1.5px solid var(--border-strong);border-radius:var(--radius-sm);background:var(--surface-alt);color:var(--text);}
+.field select{width:100%;padding:10px 12px;border:1.5px solid var(--border-strong);border-radius:var(--radius-sm);background:var(--surface-alt);color:var(--text);}
+.field select:focus{outline:none;border-color:var(--brand);background:#fff;}
+.version-preview{margin-top:8px;font-size:12.5px;color:var(--text-muted);background:var(--surface-alt);border:1px dashed var(--border-strong);border-radius:7px;padding:7px 10px;}
+.tag-input{display:flex;flex-wrap:wrap;gap:6px;align-items:center;width:100%;padding:8px 10px;border:1.5px solid var(--border-strong);border-radius:var(--radius-sm);background:var(--surface-alt);}
+.tag-input:focus-within{border-color:var(--brand);background:#fff;}
+.tag-input input{flex:1;min-width:120px;border:none;background:transparent;padding:4px 2px;outline:none;}
+.device-chip{display:inline-flex;align-items:center;gap:6px;background:var(--brand-tint);color:var(--brand-dark);font-size:12.5px;font-weight:600;padding:5px 6px 5px 10px;border-radius:20px;}
+.device-chip button{background:none;border:none;color:var(--brand-dark);opacity:.7;font-size:11px;padding:0;}
+.device-chip button:hover{opacity:1;}
+.field input:focus{outline:none;border-color:var(--brand);background:#fff;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.platform-picker{display:flex;gap:10px;}
+.platform-opt{flex:1;border:1.5px solid var(--border-strong);border-radius:var(--radius-sm);padding:12px;text-align:center;font-weight:600;color:var(--text-muted);background:var(--surface-alt);transition:.15s;}
+.platform-opt.active{border-color:var(--brand);color:var(--brand-dark);background:var(--brand-tint);}
+.platform-opt input{display:none;}
+.setup-actions{margin-top:24px;display:flex;gap:10px;flex-wrap:wrap;}
+.btn{border:none;border-radius:var(--radius-sm);padding:11px 18px;font-weight:600;font-size:14px;transition:.15s;}
+.btn-primary{background:var(--brand);color:#fff;}
+.btn-primary:hover{background:var(--brand-dark);}
+.btn-ghost{background:transparent;color:var(--text-muted);border:1.5px solid var(--border-strong);}
+.btn-ghost:hover{border-color:var(--text-muted);color:var(--text);}
+.resume-banner{margin-top:16px;background:var(--brand-tint);border:1px solid #F3C7DB;border-radius:var(--radius-sm);padding:12px 14px;font-size:13px;color:var(--brand-dark);display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.resume-banner button{background:none;border:none;color:var(--brand-dark);font-weight:700;text-decoration:underline;font-size:13px;}
+
+/* ---------- Main app ---------- */
+.topbar{position:sticky;top:0;z-index:30;background:rgba(243,241,246,.92);backdrop-filter:blur(6px);padding:16px 0;border-bottom:1px solid var(--border);margin-bottom:22px;}
+.topbar-inner{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+.topbar-title{display:flex;flex-direction:column;gap:2px;}
+.topbar-title .eyebrow{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--brand);font-weight:700;}
+.topbar-title h1{font-size:18px;margin:0;}
+.topbar-title .meta{font-size:12.5px;color:var(--text-muted);}
+.sync-status{font-size:11px;font-weight:600;display:inline-flex;align-items:center;gap:5px;margin-top:2px;color:var(--text-faint);}
+.sync-status.live{color:var(--ok);}
+.sync-status.saving{color:var(--brand);}
+.sync-status.error{color:var(--notok);}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+.topbar-actions{display:flex;gap:8px;flex-wrap:wrap;}
+.icon-btn{background:var(--surface);border:1.5px solid var(--border-strong);border-radius:var(--radius-sm);padding:9px 14px;font-weight:600;font-size:13px;color:var(--text);display:inline-flex;align-items:center;gap:6px;}
+.icon-btn:hover{border-color:var(--brand);color:var(--brand-dark);}
+.icon-btn.primary{background:var(--brand);border-color:var(--brand);color:#fff;}
+.icon-btn.primary:hover{background:var(--brand-dark);}
+
+.summary-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.summary-chip{flex:1;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
+.summary-chip .num{font-family:'Sora';font-weight:700;font-size:22px;line-height:1;}
+.summary-chip .lbl{font-size:11.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;margin-top:4px;}
+.summary-chip.ok .num{color:var(--ok);}
+.summary-chip.notok .num{color:var(--notok);}
+.summary-chip.na .num{color:var(--na);}
+.summary-chip.pending .num{color:var(--text-faint);}
+.progress-track{height:6px;border-radius:4px;background:var(--pending-bg);overflow:hidden;display:flex;margin-bottom:24px;border:1px solid var(--border);}
+.progress-track div{height:100%;}
+
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
+.toolbar-left{display:flex;gap:8px;align-items:center;}
+.edit-toggle{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text-muted);}
+.switch{width:38px;height:22px;border-radius:20px;background:var(--border-strong);position:relative;transition:.15s;flex-shrink:0;}
+.switch.on{background:var(--brand);}
+.switch::after{content:'';position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.2);}
+.switch.on::after{left:18px;}
+
+.grupo{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden;box-shadow:var(--shadow);}
+.grupo-header{background:linear-gradient(135deg,var(--brand),var(--brand-dark));color:#fff;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;gap:10px;cursor:pointer;}
+.grupo-header h2{font-size:15px;margin:0;font-weight:700;}
+.grupo-header .grupo-count{font-size:12px;opacity:.85;font-weight:500;}
+.grupo-header .chev{transition:.2s;font-size:13px;}
+.grupo.collapsed .grupo-header .chev{transform:rotate(-90deg);}
+.grupo-body{padding:6px 0;}
+.grupo.collapsed .grupo-body{display:none;}
+
+.subgrupo{border-top:1px solid var(--border);}
+.subgrupo:first-child{border-top:none;}
+.subgrupo-header{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:var(--surface-alt);gap:10px;}
+.subgrupo-header h3{font-size:12.5px;margin:0;text-transform:uppercase;letter-spacing:.03em;color:var(--text-muted);font-weight:700;}
+.subgrupo-header input.edit-name{font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--text-muted);font-weight:700;border:1px dashed var(--border-strong);border-radius:6px;padding:4px 6px;background:#fff;width:220px;}
+
+.item-row{display:flex;gap:14px;padding:14px 18px;border-top:1px solid var(--border);align-items:flex-start;}
+.item-row:first-of-type{border-top:none;}
+.item-main{flex:1;min-width:0;}
+.item-text{font-size:13.5px;color:var(--text);line-height:1.5;}
+.item-text textarea{width:100%;font-size:13.5px;border:1px dashed var(--border-strong);border-radius:6px;padding:6px 8px;font-family:inherit;resize:vertical;min-height:44px;background:#fff;}
+.item-obs{margin-top:8px;display:flex;align-items:stretch;gap:6px;}
+.item-obs input{flex:1;min-width:0;padding:7px 10px;border:1px solid var(--border);border-radius:7px;font-size:12.5px;background:var(--surface-alt);}
+.item-obs input:focus{outline:none;border-color:var(--brand);background:#fff;}
+.item-obs .save-freq{flex-shrink:0;width:28px;background:var(--surface-alt);border:1px solid var(--border);color:var(--text-faint);font-size:15px;border-radius:7px;}
+.item-obs .save-freq:hover{color:var(--brand-dark);background:var(--brand-tint);border-color:var(--brand);}
+.obs-suggestions{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+.obs-chip{background:var(--pending-bg);border:1px solid var(--border);color:var(--text-muted);font-size:11px;padding:3px 9px;border-radius:20px;}
+.obs-chip:hover{border-color:var(--brand);color:var(--brand-dark);background:var(--brand-tint);}
+.chip-removable{display:inline-flex;align-items:center;gap:6px;}
+.chip-x{background:none;border:none;color:var(--text-faint);font-size:11px;padding:0;line-height:1;}
+.chip-x:hover{color:var(--notok);}
+.setup-card .obs-suggestions{margin-top:8px;}
+
+.status-group{display:flex;gap:6px;flex-shrink:0;}
+.status-btn{width:74px;padding:8px 4px;border-radius:8px;border:1.5px solid var(--border-strong);background:var(--pending-bg);color:var(--text-faint);font-weight:700;font-size:11.5px;text-align:center;letter-spacing:.02em;transition:.12s;}
+.status-btn .plat{display:block;font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;opacity:.7;margin-bottom:2px;}
+.status-btn[data-state="OK"]{background:var(--ok-bg);border-color:var(--ok-border);color:var(--ok);}
+.status-btn[data-state="NOTOK"]{background:var(--notok-bg);border-color:var(--notok-border);color:var(--notok);}
+.status-btn[data-state="NA"]{background:var(--na-bg);border-color:var(--na-border);color:var(--na);}
+.status-btn:hover{filter:brightness(0.97);}
+
+.item-tools{display:flex;flex-direction:column;gap:4px;flex-shrink:0;}
+.tool-btn{background:none;border:none;color:var(--text-faint);font-size:14px;padding:3px;border-radius:5px;width:24px;height:24px;}
+.tool-btn:hover{color:var(--notok);background:var(--notok-bg);}
+
+.add-row{padding:10px 18px;}
+.add-link{background:none;border:1px dashed var(--border-strong);color:var(--text-muted);font-size:12.5px;font-weight:600;padding:8px 12px;border-radius:7px;width:100%;text-align:left;}
+.add-link:hover{border-color:var(--brand);color:var(--brand-dark);}
+
+.grupo-add-wrap{text-align:center;margin:20px 0 40px;}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(33,29,43,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modal{background:var(--surface);border-radius:var(--radius);max-width:480px;width:100%;max-height:82vh;overflow-y:auto;padding:26px;box-shadow:var(--shadow);}
+.modal h2{margin:0 0 4px;font-size:18px;}
+.modal p.sub{color:var(--text-muted);font-size:13px;margin:0 0 18px;}
+.freq-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.freq-item{display:flex;align-items:center;gap:8px;background:var(--surface-alt);border:1px solid var(--border);border-radius:7px;padding:8px 10px;}
+.freq-item span{flex:1;font-size:13px;}
+.freq-item button{background:none;border:none;color:var(--text-faint);font-size:14px;}
+.freq-item button:hover{color:var(--notok);}
+.freq-add{display:flex;gap:8px;}
+.freq-add input{flex:1;padding:9px 10px;border:1.5px solid var(--border-strong);border-radius:7px;background:var(--surface-alt);}
+.modal-close{position:absolute;top:20px;right:20px;}
+.modal-wrap{position:relative;}
+
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#fff;padding:11px 20px;border-radius:8px;font-size:13px;font-weight:600;z-index:200;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.2s;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(-6px);}
+
+@media (max-width:640px){
+  .item-row{flex-direction:column;}
+  .status-group{width:100%;}
+  .status-btn{flex:1;}
+  .row2{grid-template-columns:1fr;}
+  .topbar-actions{width:100%;}
+}
+</style>
+</head>
+<body>
+
+<!-- ============ SETUP SCREEN ============ -->
+<div id="setupScreen" class="app-shell setup-wrap">
+  <div class="brand-mark"><div class="brand-dot"></div><span>Lab Cartões · SmartIZI QA</span></div>
+  <div class="setup-card">
+    <h1>Nova checklist</h1>
+    <p class="lead">Preenche os dados da sessão de testes para começar.</p>
+
+    <div class="row2">
+      <div class="field">
+        <label>Nome(s) do tester</label>
+        <div class="tag-input" id="nameTagInput">
+          <input type="text" id="nameTextInput" placeholder="Escreve e Enter para adicionar...">
+        </div>
+        <input type="hidden" id="inpNome">
+        <div class="obs-suggestions" id="nomeChips"></div>
+      </div>
+      <div class="field"><label>Data</label><input type="date" id="inpData"></div>
+    </div>
+    <div class="field">
+      <label>Dispositivos</label>
+      <div class="tag-input" id="deviceTagInput">
+        <input type="text" id="deviceTextInput" placeholder="Escreve e Enter para adicionar...">
+      </div>
+      <input type="hidden" id="inpDispositivo">
+      <div class="obs-suggestions" id="dispositivoChips"></div>
+    </div>
+    <div class="field">
+      <label>Âmbito / versão certificada</label>
+      <div class="row2" style="grid-template-columns:1fr 1.6fr;">
+        <input type="text" id="inpVersaoNum" placeholder="4.19.0">
+        <select id="inpAmbiente">
+          <option value="Integração">Integração</option>
+          <option value="Qualidade">Qualidade</option>
+          <option value="Qualidade → Produção">Qualidade → Produção</option>
+          <option value="Produção" selected>Produção</option>
+          <option value="Produção → TestFlight">Produção → TestFlight</option>
+        </select>
+      </div>
+      <input type="hidden" id="inpVersao">
+      <div class="version-preview" id="versaoPreview">Versão — ( — )</div>
+    </div>
+
+    <div class="field">
+      <label>Plataformas a testar</label>
+      <div class="platform-picker">
+        <label class="platform-opt" id="optIos"><input type="checkbox" id="chkIos" checked>iOS</label>
+        <label class="platform-opt" id="optAndroid"><input type="checkbox" id="chkAndroid">Android</label>
+      </div>
+    </div>
+
+    <div class="setup-actions">
+      <button class="btn btn-primary" id="btnStart">Começar checklist →</button>
+      <button class="btn btn-ghost" id="btnManageFreq">Gerir observações frequentes</button>
+    </div>
+
+    <div id="resumeBanner" class="resume-banner hidden">
+      <span>Tens uma checklist em curso por guardar.</span>
+      <button id="btnResume">Continuar →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MAIN APP ============ -->
+<div id="mainScreen" class="app-shell hidden">
+  <div class="topbar">
+    <div class="app-shell" style="padding:0;">
+      <div class="topbar-inner">
+        <div class="topbar-title">
+          <span class="eyebrow" id="topModulo">CARTÕES</span>
+          <h1 id="topNomeVersao">Checklist</h1>
+          <span class="meta" id="topMeta"></span>
+          <span class="sync-status" id="syncStatus"></span>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn primary" id="btnShare">🔗 Partilhar</button>
+          <button class="icon-btn" id="btnFreqModal">🏷 Observações</button>
+          <button class="icon-btn" id="btnSaveTemplate">💾 Guardar como template</button>
+          <button class="icon-btn" id="btnNewChecklist">↺ Nova checklist</button>
+          <button class="icon-btn primary" id="btnExport">⬇ Exportar Excel</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary-bar" id="summaryBar"></div>
+  <div class="progress-track" id="progressTrack"></div>
+
+  <div class="toolbar">
+    <div class="toolbar-left" id="toolbarLeft">
+      <span style="font-size:13px;color:var(--text-muted);font-weight:600;" id="grupoCountLbl"></span>
+      <div id="markAllWrap" style="display:flex;gap:8px;"></div>
+    </div>
+    <div class="edit-toggle">
+      <span>Editar estrutura</span>
+      <div class="switch" id="editSwitch"></div>
+    </div>
+  </div>
+
+  <div id="gruposContainer"></div>
+
+  <div class="grupo-add-wrap">
+    <button class="btn btn-ghost hidden" id="btnAddGrupo">+ Adicionar categoria</button>
+  </div>
+</div>
+
+<!-- ============ FREQ OBS MODAL ============ -->
+<div id="freqModalOverlay" class="modal-overlay hidden">
+  <div class="modal modal-wrap">
+    <button class="modal-close tool-btn" id="closeFreqModal">✕</button>
+    <h2>Observações frequentes</h2>
+    <p class="sub">Frases que aparecem como sugestão rápida ao preencher observações.</p>
+    <div class="freq-list" id="freqList"></div>
+    <div class="freq-add">
+      <input type="text" id="newFreqInput" placeholder="Nova observação frequente...">
+      <button class="btn btn-primary" id="addFreqBtn">Adicionar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ SHARE MODAL ============ -->
+<div id="shareModalOverlay" class="modal-overlay hidden">
+  <div class="modal modal-wrap">
+    <button class="modal-close tool-btn" id="closeShareModal">✕</button>
+    <h2>Partilhar checklist</h2>
+    <p class="sub">Quem abrir este link entra directamente nesta checklist e pode editar em tempo real (marcar estados, escrever observações, alterar a estrutura).</p>
+    <div class="freq-add">
+      <input type="text" id="shareLinkInput" readonly>
+      <button class="btn btn-primary" id="copyShareLinkBtn">Copiar</button>
+    </div>
+    <p class="sub" id="shareCreatingMsg" style="margin-top:14px;">A criar checklist partilhada...</p>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* =====================================================
+   DADOS BASE
+===================================================== */
+const DEFAULT_TEMPLATE = {"modulo": "CARTÕES", "grupos": [{"id": "g1", "nome": "Cartões Crédito", "subgrupos": [{"id": "g1-s1", "nome": "Ver detalhes", "itens": [{"id": "g1-s1-i1", "texto": "Verificar que a Aba Movimentos apresenta a lista de movimentos com nome da transação, data, montante e botão de opções em cada linha, e que o componente de filtro está devidamente apresentado e funcional."}, {"id": "g1-s1-i2", "texto": "Confirmar que os botões de opções dos movimento redirecionam correctamente para a respetiva acção (ver detalhes do movimento)."}, {"id": "g1-s1-i3", "texto": "Validar redirecionamento dos botões das opções do cartão "}, {"id": "g1-s1-i4", "texto": "Verificar que a Aba Saldos apresenta correctamente o saldo disponível, o saldo utilizado e o limite de crédito."}, {"id": "g1-s1-i5", "texto": "Verificar que a Aba Detalhes apresenta todos os campos do cartão: data do próximo pagamento, montante da próxima prestação, opção de pagamento, estado do cartão e estado das transações online."}, {"id": "g1-s1-i6", "texto": "Confirmar que ao clicar em \"Ver dados\" na Aba Detalhes, o nome é apresentado, o número do cartão é apresentado de forma mascarada e a validade é exibida."}, {"id": "g1-s1-i7", "texto": "Confirmar que os botões de copiar junto ao número mascarado e à validade do cartão estão funcionais e copiam os dados correctamente."}, {"id": "g1-s1-i8", "texto": "Verificar que a navegação entre as abas (Movimentos, Saldos e Detalhes) funciona correctamente e sem erros visuais."}]}, {"id": "g1-s2", "nome": "Carrossel do cartão de crédito", "itens": [{"id": "g1-s2-i1", "texto": "Os icons e as descrições devem estar devidamente apresentados"}]}, {"id": "g1-s3", "nome": "Pagamento do cartão", "itens": [{"id": "g1-s3-i1", "texto": "Tela para introduzir montante"}, {"id": "g1-s3-i2", "texto": "Modal com os movimentos do mês"}, {"id": "g1-s3-i3", "texto": "Tela para confirmar dados da operação"}, {"id": "g1-s3-i4", "texto": "Tela de conclusão"}, {"id": "g1-s3-i5", "texto": "Realizar um pagamento"}]}, {"id": "g1-s4", "nome": "Inibir/Permitir e-commerce", "itens": [{"id": "g1-s4-i1", "texto": "Inibir e Permitir e-commerce com o cartão de crédito"}]}, {"id": "g1-s5", "nome": "Cash advance", "itens": [{"id": "g1-s5-i1", "texto": "Tela para introduzir montante"}, {"id": "g1-s5-i2", "texto": "Selector de cartões"}, {"id": "g1-s5-i3", "texto": "Link para consultar preçário"}, {"id": "g1-s5-i4", "texto": "Tela de confirmação de dados da operação"}, {"id": "g1-s5-i5", "texto": "Efectuar cash advance"}]}, {"id": "g1-s6", "nome": "Alterarção de limite do cartão", "itens": [{"id": "g1-s6-i1", "texto": "Validar elegibilidade do cliente para alteração de limite"}, {"id": "g1-s6-i2", "texto": "Verificar o slider de seleção de limite na tela de alteração de limite"}, {"id": "g1-s6-i3", "texto": "Verificar a função de edição manual do montante na tela de alteração de limite"}, {"id": "g1-s6-i4", "texto": "Verificar se a tela de confirmação apresenta os dados corretos"}, {"id": "g1-s6-i5", "texto": "Tela de Análise do pedido"}, {"id": "g1-s6-i6", "texto": "Tela de Documentos (termos e condições)"}, {"id": "g1-s6-i7", "texto": "Efetuar o aumento de limite do cartão"}]}, {"id": "g1-s7", "nome": "Alterar opção de pagamento", "itens": [{"id": "g1-s7-i1", "texto": "Tela para escolher a nova opção de pagamento"}, {"id": "g1-s7-i2", "texto": "Tela de confirmação"}, {"id": "g1-s7-i3", "texto": "Selector de cartões"}, {"id": "g1-s7-i4", "texto": "Secção dinâmica"}, {"id": "g1-s7-i5", "texto": "Efectuar a alteração da opção de pagamento"}]}, {"id": "g1-s8", "nome": "Bloqueio e desbloqueio", "itens": [{"id": "g1-s8-i1", "texto": "Bloquear e desbloquear cartão de crédito"}]}, {"id": "g1-s9", "nome": "Cancelamento com substituição", "itens": [{"id": "g1-s9-i1", "texto": "Informações sobre o cartão devidamente apresentadas"}, {"id": "g1-s9-i2", "texto": "Se for flamingo não deve mostrar a opção de substituir"}, {"id": "g1-s9-i3", "texto": "Tela de confirmação com dados correctos"}, {"id": "g1-s9-i4", "texto": "Efectuar o cancelamento"}]}, {"id": "g1-s10", "nome": "Cancelamento sem substituição", "itens": [{"id": "g1-s10-i1", "texto": "Efectuar o cancelamento"}]}, {"id": "g1-s11", "nome": "Requisitar cartão de crédito", "itens": [{"id": "g1-s11-i1", "texto": "Efetuar um pedido de cartão de crédito"}, {"id": "g1-s11-i2", "texto": "Bloquear nova submissão no mesmo dia após recusa"}]}]}, {"id": "g2", "nome": "Cartões Pré-pagos", "subgrupos": [{"id": "g2-s1", "nome": "Ver detalhes", "itens": [{"id": "g2-s1-i1", "texto": "Verificar que a Aba Movimentos apresenta a lista de movimentos com nome da transação, data e montante em cada linha, devidamente formatados."}, {"id": "g2-s1-i2", "texto": "Confirmar que o filtro na Aba Movimentos está devidamente apresentado e funcional, permitindo filtrar por período."}, {"id": "g2-s1-i3", "texto": "Confirmar que os botões de opções dos movimento redirecionam correctamente para a respetiva acção (ver detalhes do movimento)."}, {"id": "g2-s1-i4", "texto": "Validar redirecionamento dos botões das opções do cartão"}, {"id": "g2-s1-i5", "texto": "Verificar que a Aba Detalhes apresenta todos os campos do cartão: saldo disponível, estado do cartão e estado das transações online, entidade, referência."}, {"id": "g2-s1-i6", "texto": "Confirmar que ao clicar em \"Ver dados\" na Aba Detalhes, o número do cartão é apresentado de forma mascarada e a validade é exibida."}, {"id": "g2-s1-i7", "texto": "Verificar que a navegação entre as abas (Movimentos e Detalhes) funciona correctamente e sem erros visuais."}, {"id": "g2-s1-i8", "texto": "Confirmar que os botões de copiar junto ao número mascarado e à validade do cartão estão funcionais e copiam os dados correctamente."}]}, {"id": "g2-s2", "nome": "Carrossel do cartão pré-pago", "itens": [{"id": "g2-s2-i1", "texto": "Os icons e as descrições devem estar devidamente apresentados"}]}, {"id": "g2-s3", "nome": "Carregar cartão", "itens": [{"id": "g2-s3-i1", "texto": "Realizar o carregamento do cartão com um montante válido dentro do limite diário permitido"}]}, {"id": "g2-s4", "nome": "Inibir/permitir E-commerce", "itens": [{"id": "g2-s4-i1", "texto": "Inibir e Permitir e-commerce com o cartão de pré-pago"}]}, {"id": "g2-s5", "nome": "Transferir", "itens": [{"id": "g2-s5-i1", "texto": "Realizar uma transferência para outra conta"}]}, {"id": "g2-s6", "nome": "Bloquear/desbloquear cartão", "itens": [{"id": "g2-s6-i1", "texto": "Bloquear e desbloquear cartão pré-pago"}]}]}, {"id": "g3", "nome": "Cartões de débito", "subgrupos": [{"id": "g3-s1", "nome": "Ver detalhes", "itens": [{"id": "g3-s1-i1", "texto": "Verificar que a Aba Detalhes apresenta os dados do cartão devidamente preenchidos: transações online e estado do cartão."}, {"id": "g3-s1-i2", "texto": "Confirmar que ao clicar em \"Ver dados\" na Aba Detalhes, o nome é apresentado, o número do cartão é apresentado de forma mascarada e a validade é exibida."}, {"id": "g3-s1-i3", "texto": "Validar redirecionamento dos botões das opções do cartão "}, {"id": "g3-s1-i4", "texto": "Verificar que a navegação entre as abas disponíveis funciona correctamente e sem erros visuais."}, {"id": "g3-s1-i5", "texto": "Confirmar que os botões de copiar junto ao número mascarado, nome e à validade do cartão estão funcionais e copiam os dados correctamente."}]}, {"id": "g3-s2", "nome": "Carrossel do cartão de débito", "itens": [{"id": "g3-s2-i1", "texto": "Verificar que os ícones, imagens e descrições do carrossel do cartão de débito são apresentados corretamente."}]}, {"id": "g3-s3", "nome": "Bloquear/desbloquear cartão", "itens": [{"id": "g3-s3-i1", "texto": "Bloquear e desbloquear o cartão de débito, confirmando a alteração de estado após cada operação."}]}, {"id": "g3-s4", "nome": "Inibir/Permitir e-commerce", "itens": [{"id": "g3-s4-i1", "texto": "Inibir e permitir o e-commerce no cartão de débito, validando a alteração de estado em cada operação."}]}, {"id": "g3-s5", "nome": "Cancelar cartão de débito", "itens": [{"id": "g3-s5-i1", "texto": "Verificar que a tela de seleção do motivo de cancelamento apresenta todas as opções corretamente."}, {"id": "g3-s5-i2", "texto": "Verificar que a tela de confirmação exibe os dados da operação de forma correta e completa."}, {"id": "g3-s5-i3", "texto": "Verificar que os balcões sugeridos são apresentados de forma segmentada e adequada ao perfil do cliente."}, {"id": "g3-s5-i4", "texto": "Efetuar o cancelamento do cartão de débito com sucesso e confirmar a tela de conclusão."}]}, {"id": "g3-s6", "nome": "Requisitar cartão de débito personalizado", "itens": [{"id": "g3-s6-i1", "texto": "Verificar que o carrossel apresenta as imagens, descrições e anuidade de cada opção de cartão personalizado disponível."}, {"id": "g3-s6-i2", "texto": "Confirmar que a secção de vantagens e informações de segurança está devidamente apresentada e legível."}, {"id": "g3-s6-i3", "texto": "Verificar que o componente de perguntas frequentes (FAQ) expande e colapsa correctamente."}, {"id": "g3-s6-i4", "texto": "Tela de inserção do nome, conta e escolha do balcão"}, {"id": "g3-s6-i5", "texto": "Tela de contratação"}, {"id": "g3-s6-i6", "texto": "Confirmar que a tela de confirmação do pedido exibe todos os dados correctamente (tipo de cartão, imagem, balcão,anuidade, nome a gravar, documentos para consulta,  e email se tiver)."}, {"id": "g3-s6-i7", "texto": "Verificar que, após a submissão com sucesso, a tela de conclusão é apresentada com a indicação do estado do pedido e os próximos passos."}, {"id": "g3-s6-i8", "texto": "Efetuar o pedido completo de cartão de débito personalizado de ponta a ponta com sucesso."}]}, {"id": "g3-s7", "nome": "Requisitar cartão de débito não personalizado", "itens": [{"id": "g3-s7-i1", "texto": "Verificar que o carrossel apresenta as imagens, descrições e anuidade do cartão não personalizado disponível."}, {"id": "g3-s7-i2", "texto": "Confirmar que a secção de vantagens e informações de segurança está devidamente apresentada e legível."}, {"id": "g3-s7-i3", "texto": "Verificar que o componente de perguntas frequentes (FAQ) expande e colapsa correctamente."}, {"id": "g3-s7-i4", "texto": "Verificar que o componente \"Ver Passos\" apresenta as etapas do processo de requisição de forma clara e ordenada."}, {"id": "g3-s7-i5", "texto": "Verificar que a tela de confirmação do pedido exibe todos os dados correctamente (tipo de cartão, imagem, conta á ordem associada, anuidade, documentos para consulta e email se tiver)."}, {"id": "g3-s7-i6", "texto": "Verificar que o fluxo de autenticação (OTP) é apresentado correctamente antes da submissão final."}, {"id": "g3-s7-i7", "texto": "Verificar que, após a submissão com sucesso, a tela de conclusão é apresentada com a indicação do estado do pedido, o código de levantamento e os próximos passos."}]}]}]};
+const DEFAULT_FREQ_OBS = [
+  "Recusados pela OM",
+  "Utilizador já tem cartão",
+  "Nenhum cartão tem saldo em dívida",
+  "Funcionalidade não disponível no ambiente de testes",
+  "Sem cartões elegíveis para o teste",
+  "Erro de servidor (5xx) ao submeter",
+  "Aguarda correção em nova build",
+  "Sem dados de teste disponíveis para este cenário"
+];
+
+const LS_TEMPLATE = 'szqa_template_v1';
+const LS_SESSION  = 'szqa_session_v1';
+const LS_FREQOBS  = 'szqa_freqobs_v1';
+const LS_LASTNOME = 'szqa_lastnome_v1';
+
+const STATE_CYCLE = [null, 'OK', 'NOTOK', 'NA'];
+const STATE_LABEL = { OK:'OK', NOTOK:'NOT OK', NA:'N/A' };
+
+let session = null;      // active checklist in memory
+let editMode = false;
+let uidCounter = 1;
+
+function uid(prefix){ return prefix + '-' + (Date.now().toString(36)) + (uidCounter++); }
+
+/* =====================================================
+   PERSISTENCE HELPERS
+===================================================== */
+function loadTemplate(){
+  try{
+    const raw = localStorage.getItem(LS_TEMPLATE);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return JSON.parse(JSON.stringify(DEFAULT_TEMPLATE));
+}
+function saveTemplate(tpl){
+  localStorage.setItem(LS_TEMPLATE, JSON.stringify(tpl));
+}
+function loadFreqObs(){
+  try{
+    const raw = localStorage.getItem(LS_FREQOBS);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return DEFAULT_FREQ_OBS.slice();
+}
+function saveFreqObs(list){
+  localStorage.setItem(LS_FREQOBS, JSON.stringify(list));
+}
+function loadSession(){
+  try{
+    const raw = localStorage.getItem(LS_SESSION);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return null;
+}
+function clearSession(){
+  localStorage.removeItem(LS_SESSION);
+  session = null;
+}
+
+/* =====================================================
+   SINCRONIZAÇÃO REMOTA (partilha entre colegas)
+===================================================== */
+let lastSyncedAt = 0;      // timestamp da última versão que já temos (nossa ou recebida)
+let saveTimer = null;
+let pollTimer = null;
+
+function setSyncStatus(kind, text){
+  const el = document.getElementById('syncStatus');
+  if(!el) return;
+  el.className = 'sync-status ' + (kind||'');
+  el.innerHTML = kind ? `<span class="sync-dot"></span>${text}` : '';
+}
+
+function persistSession(){
+  if(!session) return;
+  localStorage.setItem(LS_SESSION, JSON.stringify(session));
+  if(session.id){
+    setSyncStatus('saving', 'a guardar...');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(pushToServer, 500);
+  }
+}
+
+async function pushToServer(){
+  if(!session || !session.id) return;
+  try{
+    const res = await fetch('/api/checklist?id=' + encodeURIComponent(session.id), {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session })
+    });
+    if(!res.ok) throw new Error('save failed');
+    const data = await res.json();
+    lastSyncedAt = data.updatedAt || Date.now();
+    setSyncStatus('live', 'sincronizado');
+  }catch(e){
+    console.error('push error', e);
+    setSyncStatus('error', 'falha ao sincronizar');
+  }
+}
+
+function isUserTyping(){
+  const el = document.activeElement;
+  if(!el) return false;
+  if(el.tagName === 'TEXTAREA') return true;
+  if(el.tagName === 'INPUT' && (el.type === 'text' || el.type === 'date')) return true;
+  return false;
+}
+
+async function pollRemote(){
+  if(!session || !session.id) return;
+  if(isUserTyping()) return; // não interromper quem está a escrever
+  try{
+    const res = await fetch('/api/checklist?id=' + encodeURIComponent(session.id));
+    if(!res.ok) return;
+    const data = await res.json();
+    if(!data || !data.session) return;
+    if(data.updatedAt && data.updatedAt <= lastSyncedAt) return; // nada de novo
+    session = data.session;
+    session.id = data.id;
+    lastSyncedAt = data.updatedAt;
+    localStorage.setItem(LS_SESSION, JSON.stringify(session));
+    renderApp();
+    setSyncStatus('live', 'actualizado agora');
+  }catch(e){
+    console.error('poll error', e);
+  }
+}
+function startPolling(){
+  stopPolling();
+  pollTimer = setInterval(pollRemote, 2500);
+}
+function stopPolling(){
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = null;
+}
+
+async function createSharedChecklist(){
+  try{
+    const res = await fetch('/api/checklist', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ session })
+    });
+    if(!res.ok) throw new Error('create failed');
+    const data = await res.json();
+    session.id = data.id;
+    lastSyncedAt = data.updatedAt || Date.now();
+    setSyncStatus('live', 'sincronizado');
+  }catch(e){
+    console.error('create error', e);
+    setSyncStatus('error', 'sem ligação — a guardar só neste computador');
+    toast('Não foi possível criar a checklist partilhada. Vais continuar só localmente.');
+  }
+  localStorage.setItem(LS_SESSION, JSON.stringify(session));
+}
+
+async function loadSharedChecklist(id){
+  toast('A carregar checklist partilhada...');
+  try{
+    const res = await fetch('/api/checklist?id=' + encodeURIComponent(id));
+    if(!res.ok) throw new Error('not found');
+    const data = await res.json();
+    session = data.session;
+    session.id = data.id;
+    lastSyncedAt = data.updatedAt || Date.now();
+    localStorage.setItem(LS_SESSION, JSON.stringify(session));
+    editMode = false;
+    showMain();
+    startPolling();
+    setSyncStatus('live', 'sincronizado');
+  }catch(e){
+    console.error(e);
+    toast('Não foi possível encontrar essa checklist partilhada.');
+    history.replaceState(null, '', location.pathname);
+    document.getElementById('setupScreen').classList.remove('hidden');
+  }
+}
+
+function shareUrlFor(id){
+  return location.origin + location.pathname + '?id=' + encodeURIComponent(id);
+}
+function openShareModal(){
+  const overlay = document.getElementById('shareModalOverlay');
+  const input = document.getElementById('shareLinkInput');
+  const creating = document.getElementById('shareCreatingMsg');
+  overlay.classList.remove('hidden');
+  if(session && session.id){
+    creating.classList.add('hidden');
+    input.value = shareUrlFor(session.id);
+  } else {
+    creating.classList.remove('hidden');
+    input.value = 'A gerar link...';
+  }
+}
+document.getElementById('btnShare').addEventListener('click', openShareModal);
+document.getElementById('closeShareModal').addEventListener('click', ()=>{
+  document.getElementById('shareModalOverlay').classList.add('hidden');
+});
+document.getElementById('shareModalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'shareModalOverlay') e.target.classList.add('hidden');
+});
+document.getElementById('copyShareLinkBtn').addEventListener('click', ()=>{
+  const input = document.getElementById('shareLinkInput');
+  input.select();
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(input.value).then(()=>toast('Link copiado ✓')).catch(()=>document.execCommand('copy'));
+  } else {
+    document.execCommand('copy');
+    toast('Link copiado ✓');
+  }
+});
+
+let freqObs = loadFreqObs();
+
+/* =====================================================
+   TOAST
+===================================================== */
+let toastTimer = null;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>el.classList.remove('show'), 2200);
+}
+
+/* =====================================================
+   SETUP SCREEN LOGIC
+===================================================== */
+const inpNome = document.getElementById('inpNome');
+const inpData = document.getElementById('inpData');
+const inpDispositivo = document.getElementById('inpDispositivo');
+const inpVersao = document.getElementById('inpVersao');
+const chkIos = document.getElementById('chkIos');
+const chkAndroid = document.getElementById('chkAndroid');
+const optIos = document.getElementById('optIos');
+const optAndroid = document.getElementById('optAndroid');
+
+function refreshPlatformStyles(){
+  optIos.classList.toggle('active', chkIos.checked);
+  optAndroid.classList.toggle('active', chkAndroid.checked);
+}
+// Nota: <label> já delega o clique para o <input> associado nativamente,
+// por isso NÃO fazemos toggle manual aqui (isso duplicava o toggle e anulava-o).
+chkIos.addEventListener('change', refreshPlatformStyles);
+chkAndroid.addEventListener('change', refreshPlatformStyles);
+refreshPlatformStyles();
+
+inpData.value = new Date().toISOString().slice(0,10);
+
+/* =====================================================
+   NOMES / DISPOSITIVOS RECENTES
+===================================================== */
+const LS_NOMES = 'szqa_nomes_v1';
+const LS_DISPOSITIVOS = 'szqa_dispositivos_v1';
+
+function loadRecentList(key){
+  try{
+    const raw = localStorage.getItem(key);
+    if(raw) return JSON.parse(raw);
+  }catch(e){}
+  return [];
+}
+function saveRecentList(key, list){
+  localStorage.setItem(key, JSON.stringify(list));
+}
+function rememberValue(key, value){
+  const v = (value||'').trim();
+  if(!v) return;
+  let list = loadRecentList(key);
+  list = list.filter(x=>x.toLowerCase() !== v.toLowerCase());
+  list.unshift(v);
+  list = list.slice(0, 8);
+  saveRecentList(key, list);
+}
+function renderRecentChips(containerId, key, onSelect){
+  const cont = document.getElementById(containerId);
+  const list = loadRecentList(key);
+  cont.innerHTML = '';
+  list.forEach(v=>{
+    const chip = document.createElement('span');
+    chip.className = 'obs-chip chip-removable';
+    chip.style.cursor = 'pointer';
+    const label = document.createElement('span');
+    label.textContent = v;
+    label.addEventListener('click', ()=>{ onSelect(v); });
+    const x = document.createElement('button');
+    x.className = 'chip-x';
+    x.textContent = '✕';
+    x.title = 'Remover dos recentes';
+    x.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      const updated = loadRecentList(key).filter(item=>item!==v);
+      saveRecentList(key, updated);
+      renderRecentChips(containerId, key, onSelect);
+    });
+    chip.appendChild(label);
+    chip.appendChild(x);
+    cont.appendChild(chip);
+  });
+}
+renderRecentChips('nomeChips', LS_NOMES, (v)=>{ addName(v); });
+renderRecentChips('dispositivoChips', LS_DISPOSITIVOS, (v)=>{ addDevice(v); });
+
+/* =====================================================
+   NOME(S) — MULTI-TAG INPUT
+===================================================== */
+let selectedNames = [];
+const nameTagInput = document.getElementById('nameTagInput');
+const nameTextInput = document.getElementById('nameTextInput');
+
+function syncNameHidden(){
+  inpNome.value = selectedNames.join(' | ');
+}
+function renderNameChips(){
+  [...nameTagInput.querySelectorAll('.device-chip')].forEach(c=>c.remove());
+  selectedNames.forEach((n, idx)=>{
+    const chip = document.createElement('span');
+    chip.className = 'device-chip';
+    const label = document.createElement('span');
+    label.textContent = n;
+    const x = document.createElement('button');
+    x.textContent = '✕';
+    x.title = 'Remover';
+    x.addEventListener('click', ()=>{
+      selectedNames.splice(idx,1);
+      renderNameChips();
+    });
+    chip.appendChild(label);
+    chip.appendChild(x);
+    nameTagInput.insertBefore(chip, nameTextInput);
+  });
+  syncNameHidden();
+}
+function addName(val){
+  val = (val||'').trim();
+  if(!val) return;
+  if(!selectedNames.some(n=>n.toLowerCase()===val.toLowerCase())) selectedNames.push(val);
+  renderNameChips();
+}
+nameTextInput.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' || e.key===','){
+    e.preventDefault();
+    addName(nameTextInput.value);
+    nameTextInput.value = '';
+  } else if(e.key==='Backspace' && nameTextInput.value===''){
+    selectedNames.pop();
+    renderNameChips();
+  }
+});
+nameTagInput.addEventListener('click', (e)=>{
+  if(e.target===nameTagInput) nameTextInput.focus();
+});
+
+const savedNome = localStorage.getItem(LS_LASTNOME);
+if(savedNome) savedNome.split('|').map(s=>s.trim()).filter(Boolean).forEach(addName);
+
+/* =====================================================
+   DISPOSITIVOS — MULTI-TAG INPUT
+===================================================== */
+let selectedDevices = [];
+const deviceTagInput = document.getElementById('deviceTagInput');
+const deviceTextInput = document.getElementById('deviceTextInput');
+
+function syncDeviceHidden(){
+  inpDispositivo.value = selectedDevices.join(' | ');
+}
+function renderDeviceChips(){
+  [...deviceTagInput.querySelectorAll('.device-chip')].forEach(c=>c.remove());
+  selectedDevices.forEach((d, idx)=>{
+    const chip = document.createElement('span');
+    chip.className = 'device-chip';
+    const label = document.createElement('span');
+    label.textContent = d;
+    const x = document.createElement('button');
+    x.textContent = '✕';
+    x.title = 'Remover';
+    x.addEventListener('click', ()=>{
+      selectedDevices.splice(idx,1);
+      renderDeviceChips();
+    });
+    chip.appendChild(label);
+    chip.appendChild(x);
+    deviceTagInput.insertBefore(chip, deviceTextInput);
+  });
+  syncDeviceHidden();
+}
+function addDevice(val){
+  val = (val||'').trim();
+  if(!val) return;
+  if(!selectedDevices.some(d=>d.toLowerCase()===val.toLowerCase())) selectedDevices.push(val);
+  renderDeviceChips();
+}
+deviceTextInput.addEventListener('keydown', (e)=>{
+  if(e.key==='Enter' || e.key===','){
+    e.preventDefault();
+    addDevice(deviceTextInput.value);
+    deviceTextInput.value = '';
+  } else if(e.key==='Backspace' && deviceTextInput.value===''){
+    selectedDevices.pop();
+    renderDeviceChips();
+  }
+});
+deviceTagInput.addEventListener('click', (e)=>{
+  if(e.target===deviceTagInput) deviceTextInput.focus();
+});
+
+/* =====================================================
+   VERSÃO — NÚMERO + AMBIENTE
+===================================================== */
+const inpVersaoNum = document.getElementById('inpVersaoNum');
+const inpAmbiente = document.getElementById('inpAmbiente');
+const versaoPreview = document.getElementById('versaoPreview');
+const LS_LASTVERSIONNUM = 'szqa_lastversionnum_v1';
+const LS_LASTAMBIENTE = 'szqa_lastambiente_v1';
+function updateVersaoPreview(){
+  const num = inpVersaoNum.value.trim();
+  const amb = inpAmbiente.value;
+  const composed = num ? `Versão ${num} (${amb})` : '';
+  inpVersao.value = composed;
+  versaoPreview.textContent = composed || 'Versão — (' + amb + ')';
+}
+inpVersaoNum.addEventListener('input', updateVersaoPreview);
+inpAmbiente.addEventListener('change', updateVersaoPreview);
+inpVersaoNum.value = localStorage.getItem(LS_LASTVERSIONNUM) || '4.19.0';
+const savedAmbiente = localStorage.getItem(LS_LASTAMBIENTE);
+if(savedAmbiente) inpAmbiente.value = savedAmbiente;
+updateVersaoPreview();
+inpVersaoNum.addEventListener('focus', ()=> inpVersaoNum.select());
+
+const urlParams = new URLSearchParams(location.search);
+const urlChecklistId = urlParams.get('id');
+
+if(urlChecklistId){
+  document.getElementById('setupScreen').classList.add('hidden');
+  loadSharedChecklist(urlChecklistId).catch(()=>{});
+} else {
+  const existing = loadSession();
+  if(existing){
+    document.getElementById('resumeBanner').classList.remove('hidden');
+  }
+  document.getElementById('btnResume').addEventListener('click', ()=>{
+    session = existing;
+    editMode = false;
+    showMain();
+    if(session && session.id){
+      lastSyncedAt = 0;
+      startPolling();
+      setSyncStatus('live', 'sincronizado');
+    }
+  });
+}
+
+document.getElementById('btnStart').addEventListener('click', async ()=>{
+  if(!chkIos.checked && !chkAndroid.checked){
+    toast('Escolhe pelo menos uma plataforma.');
+    return;
+  }
+  if(nameTextInput.value.trim()){
+    addName(nameTextInput.value);
+    nameTextInput.value = '';
+  }
+  if(!inpNome.value.trim()){
+    toast('Indica pelo menos um nome.');
+    return;
+  }
+  if(deviceTextInput.value.trim()){
+    addDevice(deviceTextInput.value);
+    deviceTextInput.value = '';
+  }
+  localStorage.setItem(LS_LASTNOME, inpNome.value.trim());
+  selectedNames.forEach(n => rememberValue(LS_NOMES, n));
+  selectedDevices.forEach(d => rememberValue(LS_DISPOSITIVOS, d));
+  localStorage.setItem(LS_LASTVERSIONNUM, inpVersaoNum.value.trim());
+  localStorage.setItem(LS_LASTAMBIENTE, inpAmbiente.value);
+  const tpl = loadTemplate();
+  const plataformas = [];
+  if(chkIos.checked) plataformas.push('ios');
+  if(chkAndroid.checked) plataformas.push('android');
+
+  const grupos = tpl.grupos.map(g => ({
+    id: g.id, nome: g.nome,
+    subgrupos: g.subgrupos.map(s => ({
+      id: s.id, nome: s.nome,
+      itens: s.itens.map(it => ({
+        id: it.id, texto: it.texto,
+        status: { ios: null, android: null },
+        obs: ''
+      }))
+    }))
+  }));
+
+  session = {
+    meta: {
+      nome: inpNome.value.trim(),
+      data: inpData.value,
+      dispositivo: inpDispositivo.value.trim(),
+      versao: inpVersao.value.trim(),
+      plataformas
+    },
+    modulo: tpl.modulo,
+    grupos,
+    collapsed: {}
+  };
+  editMode = false;
+  showMain();
+  openShareModal();
+  await createSharedChecklist();
+  if(session.id){
+    document.getElementById('shareLinkInput').value = shareUrlFor(session.id);
+    document.getElementById('shareCreatingMsg').classList.add('hidden');
+    history.replaceState(null, '', location.pathname + '?id=' + encodeURIComponent(session.id));
+    startPolling();
+  }
+});
+
+/* =====================================================
+   FREQ OBS MODAL (accessible from setup screen too)
+===================================================== */
+function renderFreqModal(){
+  const list = document.getElementById('freqList');
+  list.innerHTML = '';
+  freqObs.forEach((f, idx)=>{
+    const row = document.createElement('div');
+    row.className = 'freq-item';
+    row.innerHTML = `<span></span><button title="Remover">✕</button>`;
+    row.querySelector('span').textContent = f;
+    row.querySelector('button').addEventListener('click', ()=>{
+      freqObs.splice(idx,1);
+      saveFreqObs(freqObs);
+      renderFreqModal();
+      if(session) renderApp();
+    });
+    list.appendChild(row);
+  });
+}
+function openFreqModal(){
+  renderFreqModal();
+  document.getElementById('freqModalOverlay').classList.remove('hidden');
+}
+document.getElementById('btnManageFreq').addEventListener('click', openFreqModal);
+document.getElementById('btnFreqModal').addEventListener('click', openFreqModal);
+document.getElementById('closeFreqModal').addEventListener('click', ()=>{
+  document.getElementById('freqModalOverlay').classList.add('hidden');
+});
+document.getElementById('addFreqBtn').addEventListener('click', addFreqFromInput);
+document.getElementById('newFreqInput').addEventListener('keydown', (e)=>{ if(e.key==='Enter') addFreqFromInput(); });
+function addFreqFromInput(){
+  const inp = document.getElementById('newFreqInput');
+  const val = inp.value.trim();
+  if(!val) return;
+  if(freqObs.includes(val)){ toast('Já existe nessa lista.'); return; }
+  freqObs.push(val);
+  saveFreqObs(freqObs);
+  inp.value = '';
+  renderFreqModal();
+}
+
+/* =====================================================
+   SCREEN SWITCH
+===================================================== */
+function showMain(){
+  document.getElementById('setupScreen').classList.add('hidden');
+  document.getElementById('mainScreen').classList.remove('hidden');
+  renderApp();
+}
+function showSetup(){
+  document.getElementById('mainScreen').classList.add('hidden');
+  document.getElementById('setupScreen').classList.remove('hidden');
+}
+document.getElementById('btnNewChecklist').addEventListener('click', ()=>{
+  if(!confirm('Começar uma nova checklist? Isto não apaga a checklist partilhada actual (os colegas continuam a vê-la), só sais dela para começar outra.')) return;
+  stopPolling();
+  clearSession();
+  selectedDevices = [];
+  renderDeviceChips();
+  history.replaceState(null, '', location.pathname);
+  setSyncStatus('', '');
+  showSetup();
+  document.getElementById('resumeBanner').classList.add('hidden');
+});
+document.getElementById('btnSaveTemplate').addEventListener('click', ()=>{
+  if(!session) return;
+  const tpl = {
+    modulo: session.modulo,
+    grupos: session.grupos.map(g=>({
+      id:g.id, nome:g.nome,
+      subgrupos: g.subgrupos.map(s=>({
+        id:s.id, nome:s.nome,
+        itens: s.itens.map(it=>({id:it.id, texto:it.texto}))
+      }))
+    }))
+  };
+  saveTemplate(tpl);
+  toast('Estrutura guardada como template padrão ✓');
+});
+
+/* =====================================================
+   RENDER — SUMMARY
+===================================================== */
+function allItems(){
+  const out = [];
+  session.grupos.forEach(g=>g.subgrupos.forEach(s=>s.itens.forEach(it=>out.push(it))));
+  return out;
+}
+function renderSummary(){
+  const items = allItems();
+  const plats = session.meta.plataformas;
+  let ok=0, notok=0, na=0, pending=0, total=0;
+  items.forEach(it=>{
+    plats.forEach(p=>{
+      total++;
+      const st = it.status[p];
+      if(st==='OK') ok++;
+      else if(st==='NOTOK') notok++;
+      else if(st==='NA') na++;
+      else pending++;
+    });
+  });
+  const bar = document.getElementById('summaryBar');
+  bar.innerHTML = `
+    <div class="summary-chip ok"><div class="num">${ok}</div><div class="lbl">OK</div></div>
+    <div class="summary-chip notok"><div class="num">${notok}</div><div class="lbl">Not OK</div></div>
+    <div class="summary-chip na"><div class="num">${na}</div><div class="lbl">N/A</div></div>
+    <div class="summary-chip pending"><div class="num">${pending}</div><div class="lbl">Por testar</div></div>
+  `;
+  const track = document.getElementById('progressTrack');
+  track.innerHTML = '';
+  const segs = [
+    {n:ok, c:'var(--ok)'}, {n:notok, c:'var(--notok)'}, {n:na, c:'var(--na)'}, {n:pending, c:'var(--pending-bg)'}
+  ];
+  segs.forEach(s=>{
+    if(s.n<=0) return;
+    const d = document.createElement('div');
+    d.style.width = (s.n/total*100)+'%';
+    d.style.background = s.c;
+    track.appendChild(d);
+  });
+
+  document.getElementById('topModulo').textContent = session.modulo || 'CHECKLIST';
+  document.getElementById('topNomeVersao').textContent = session.meta.versao || 'Checklist';
+  const platLbl = plats.map(p=>p==='ios'?'iOS':'Android').join(' + ');
+  document.getElementById('topMeta').textContent = `${session.meta.nome} · ${session.meta.data} · ${session.meta.dispositivo || 'dispositivo n/d'} · ${platLbl}`;
+  document.getElementById('grupoCountLbl').textContent = `${session.grupos.length} categorias · ${items.length} itens`;
+  renderMarkAllButtons();
+}
+
+function markAllOk(plat){
+  const label = plat==='ios' ? 'iOS' : 'Android';
+  if(!confirm(`Marcar todos os itens como OK em ${label}? Isto substitui os estados actuais dessa plataforma.`)) return;
+  allItems().forEach(it => { it.status[plat] = 'OK'; });
+  persistSession();
+  renderApp();
+  toast(`Todos os itens marcados como OK (${label}) ✓`);
+}
+
+function renderMarkAllButtons(){
+  const wrap = document.getElementById('markAllWrap');
+  wrap.innerHTML = '';
+  session.meta.plataformas.forEach(plat=>{
+    const label = plat==='ios' ? 'iOS' : 'Android';
+    const btn = document.createElement('button');
+    btn.className = 'icon-btn';
+    btn.textContent = `✓ Marcar tudo OK · ${label}`;
+    btn.addEventListener('click', ()=>markAllOk(plat));
+    wrap.appendChild(btn);
+  });
+}
+
+/* =====================================================
+   OBS AUTOCOMPLETE
+===================================================== */
+function suggestionsFor(query){
+  const q = (query||'').toLowerCase();
+  if(!q) return freqObs.slice(0,6);
+  return freqObs.filter(f=>f.toLowerCase().includes(q)).slice(0,6);
+}
+
+/* =====================================================
+   RENDER — GRUPOS / ITEMS
+===================================================== */
+function statusBtnHTML(itemId, plat, state){
+  const label = plat==='ios' ? 'iOS' : 'Android';
+  const short = plat==='ios' ? 'iOS' : 'AND';
+  const showPlat = session.meta.plataformas.length > 1;
+  const text = state ? STATE_LABEL[state] : '—';
+  return `<button class="status-btn" data-state="${state||''}" data-item="${itemId}" data-plat="${plat}" title="${label}: clicar para alternar OK / NOT OK / N/A">
+    ${showPlat ? `<span class="plat">${short}</span>` : ''}${text}
+  </button>`;
+}
+
+function renderApp(){
+  if(!session) return;
+  renderSummary();
+  const cont = document.getElementById('gruposContainer');
+  cont.innerHTML = '';
+
+  session.grupos.forEach(grupo=>{
+    const gEl = document.createElement('div');
+    gEl.className = 'grupo' + (session.collapsed[grupo.id] ? ' collapsed' : '');
+
+    const itemCount = grupo.subgrupos.reduce((a,s)=>a+s.itens.length,0);
+    const header = document.createElement('div');
+    header.className = 'grupo-header';
+    header.innerHTML = `
+      <h2>${editMode ? '' : escapeHtml(grupo.nome)}</h2>
+      <span class="grupo-count">${itemCount} itens</span>
+      <span class="chev">▾</span>
+    `;
+    if(editMode){
+      const h2 = header.querySelector('h2');
+      const inp = document.createElement('input');
+      inp.type='text'; inp.value=grupo.nome; inp.className='edit-name';
+      inp.style.cssText = 'background:rgba(255,255,255,.15);border:1px dashed rgba(255,255,255,.5);color:#fff;border-radius:6px;padding:4px 8px;font-weight:700;font-size:15px;width:220px;';
+      inp.addEventListener('click', e=>e.stopPropagation());
+      inp.addEventListener('input', ()=>{ grupo.nome = inp.value; persistSession(); });
+      h2.appendChild(inp);
+      const delBtn = document.createElement('button');
+      delBtn.textContent = '🗑';
+      delBtn.title = 'Remover categoria';
+      delBtn.style.cssText = 'background:none;border:none;color:#fff;font-size:14px;opacity:.85;';
+      delBtn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        if(confirm(`Remover a categoria "${grupo.nome}" e todos os seus itens?`)){
+          session.grupos = session.grupos.filter(g=>g.id!==grupo.id);
+          persistSession(); renderApp();
+        }
+      });
+      header.insertBefore(delBtn, header.querySelector('.chev'));
+    }
+    header.addEventListener('click', (e)=>{
+      if(e.target.tagName==='INPUT' || e.target.tagName==='BUTTON') return;
+      session.collapsed[grupo.id] = !session.collapsed[grupo.id];
+      persistSession();
+      gEl.classList.toggle('collapsed');
+    });
+    gEl.appendChild(header);
+
+    const body = document.createElement('div');
+    body.className = 'grupo-body';
+
+    grupo.subgrupos.forEach(sub=>{
+      const sEl = document.createElement('div');
+      sEl.className = 'subgrupo';
+      const sHeader = document.createElement('div');
+      sHeader.className = 'subgrupo-header';
+      if(editMode){
+        sHeader.innerHTML = `<input type="text" class="edit-name" value="${escapeAttr(sub.nome)}"><button class="tool-btn" title="Remover subgrupo">✕</button>`;
+        sHeader.querySelector('input').addEventListener('input', (e)=>{ sub.nome = e.target.value; persistSession(); });
+        sHeader.querySelector('button').addEventListener('click', ()=>{
+          if(confirm(`Remover "${sub.nome}" e os seus itens?`)){
+            grupo.subgrupos = grupo.subgrupos.filter(s=>s.id!==sub.id);
+            persistSession(); renderApp();
+          }
+        });
+      } else {
+        sHeader.innerHTML = `<h3>${escapeHtml(sub.nome)}</h3>`;
+      }
+      sEl.appendChild(sHeader);
+
+      sub.itens.forEach(item=>{
+        const iRow = document.createElement('div');
+        iRow.className = 'item-row';
+
+        const main = document.createElement('div');
+        main.className = 'item-main';
+        const textDiv = document.createElement('div');
+        textDiv.className = 'item-text';
+        if(editMode){
+          const ta = document.createElement('textarea');
+          ta.value = item.texto;
+          ta.addEventListener('input', ()=>{ item.texto = ta.value; persistSession(); });
+          textDiv.appendChild(ta);
+        } else {
+          textDiv.textContent = item.texto;
+        }
+        main.appendChild(textDiv);
+
+        const obsWrap = document.createElement('div');
+        obsWrap.className = 'item-obs';
+        const obsInput = document.createElement('input');
+        obsInput.type = 'text';
+        obsInput.placeholder = 'Observações...';
+        obsInput.value = item.obs || '';
+        obsInput.addEventListener('input', ()=>{
+          item.obs = obsInput.value;
+          persistSession();
+          renderChips();
+        });
+        const saveFreqBtn = document.createElement('button');
+        saveFreqBtn.className = 'save-freq';
+        saveFreqBtn.title = 'Guardar como observação frequente';
+        saveFreqBtn.textContent = '＋';
+        saveFreqBtn.addEventListener('click', ()=>{
+          const v = obsInput.value.trim();
+          if(!v){ toast('Escreve uma observação primeiro.'); return; }
+          if(!freqObs.includes(v)){ freqObs.push(v); saveFreqObs(freqObs); toast('Guardado nas observações frequentes ✓'); renderChips(); }
+          else toast('Já está guardada.');
+        });
+        obsWrap.appendChild(obsInput);
+        obsWrap.appendChild(saveFreqBtn);
+
+        const chipsDiv = document.createElement('div');
+        chipsDiv.className = 'obs-suggestions';
+        function renderChips(){
+          chipsDiv.innerHTML = '';
+          suggestionsFor(obsInput.value).forEach(s=>{
+            const chip = document.createElement('button');
+            chip.className = 'obs-chip';
+            chip.type = 'button';
+            chip.textContent = s;
+            chip.addEventListener('click', ()=>{
+              obsInput.value = s;
+              item.obs = s;
+              persistSession();
+              renderChips();
+            });
+            chipsDiv.appendChild(chip);
+          });
+        }
+        renderChips();
+        main.appendChild(obsWrap);
+        main.appendChild(chipsDiv);
+        iRow.appendChild(main);
+
+        const statusGroup = document.createElement('div');
+        statusGroup.className = 'status-group';
+        session.meta.plataformas.forEach(plat=>{
+          const wrapper = document.createElement('div');
+          wrapper.innerHTML = statusBtnHTML(item.id, plat, item.status[plat]);
+          const btn = wrapper.firstElementChild;
+          btn.addEventListener('click', ()=>{
+            const cur = item.status[plat];
+            const idx = STATE_CYCLE.indexOf(cur);
+            const next = STATE_CYCLE[(idx+1) % STATE_CYCLE.length];
+            item.status[plat] = next;
+            persistSession();
+            renderApp();
+          });
+          statusGroup.appendChild(btn);
+        });
+        iRow.appendChild(statusGroup);
+
+        if(editMode){
+          const tools = document.createElement('div');
+          tools.className = 'item-tools';
+          const del = document.createElement('button');
+          del.className = 'tool-btn'; del.textContent = '✕'; del.title='Remover item';
+          del.addEventListener('click', ()=>{
+            sub.itens = sub.itens.filter(i=>i.id!==item.id);
+            persistSession(); renderApp();
+          });
+          tools.appendChild(del);
+          iRow.appendChild(tools);
+        }
+
+        sEl.appendChild(iRow);
+      });
+
+      if(editMode){
+        const addRow = document.createElement('div');
+        addRow.className = 'add-row';
+        const addBtn = document.createElement('button');
+        addBtn.className = 'add-link';
+        addBtn.textContent = '+ Adicionar item a "' + sub.nome + '"';
+        addBtn.addEventListener('click', ()=>{
+          sub.itens.push({ id: uid('i'), texto: 'Novo item a verificar...', status:{ios:null,android:null}, obs:'' });
+          persistSession(); renderApp();
+        });
+        addRow.appendChild(addBtn);
+        sEl.appendChild(addRow);
+      }
+
+      body.appendChild(sEl);
+    });
+
+    if(editMode){
+      const addSubRow = document.createElement('div');
+      addSubRow.className = 'add-row';
+      const addSubBtn = document.createElement('button');
+      addSubBtn.className = 'add-link';
+      addSubBtn.textContent = '+ Adicionar subcategoria';
+      addSubBtn.addEventListener('click', ()=>{
+        grupo.subgrupos.push({ id: uid('s'), nome: 'Nova subcategoria', itens: [] });
+        persistSession(); renderApp();
+      });
+      addSubRow.appendChild(addSubBtn);
+      body.appendChild(addSubRow);
+    }
+
+    gEl.appendChild(body);
+    cont.appendChild(gEl);
+  });
+
+  document.getElementById('btnAddGrupo').classList.toggle('hidden', !editMode);
+}
+
+document.getElementById('btnAddGrupo').addEventListener('click', ()=>{
+  session.grupos.push({ id: uid('g'), nome: 'Nova categoria', subgrupos: [{id: uid('s'), nome:'Nova subcategoria', itens:[]}] });
+  persistSession(); renderApp();
+});
+
+document.getElementById('editSwitch').addEventListener('click', function(){
+  editMode = !editMode;
+  this.classList.toggle('on', editMode);
+  renderApp();
+});
+
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function escapeAttr(s){ return escapeHtml(s); }
+
+/* =====================================================
+   EXPORT — EXCEL (ExcelJS, com cores fiéis ao layout original)
+===================================================== */
+const FILL_BRAND = 'FFC6005C';
+const FILL_HEADER = 'FF2E2A38';
+const FILL_OK = 'FFDCF3E6';
+const FILL_NOTOK = 'FFFBE1E3';
+const FILL_NA = 'FFEAE8F0';
+const FONT_OK = 'FF1E8E5A';
+const FONT_NOTOK = 'FFC6303F';
+const FONT_NA = 'FF6B6578';
+
+function cellFillFor(state){
+  if(state==='OK') return FILL_OK;
+  if(state==='NOTOK') return FILL_NOTOK;
+  if(state==='NA') return FILL_NA;
+  return null;
+}
+function fontColorFor(state){
+  if(state==='OK') return FONT_OK;
+  if(state==='NOTOK') return FONT_NOTOK;
+  if(state==='NA') return FONT_NA;
+  return 'FF9A96A6';
+}
+function stateText(state){
+  if(state==='OK') return 'OK';
+  if(state==='NOTOK') return 'NOT OK';
+  if(state==='NA') return 'N/A';
+  return '';
+}
+
+async function exportExcel(){
+  if(!session) return;
+  const wb = new ExcelJS.Workbook();
+  wb.creator = session.meta.nome || 'QA';
+  wb.created = new Date();
+  const ws = wb.addWorksheet('Checklist Geral', { views:[{state:'frozen', ySplit:8}] });
+
+  const plats = session.meta.plataformas;
+  const cols = [
+    { header:'Funcionalidade / Menu', width:28 },
+    { header:'Detalhe a verificar', width:60 },
+  ];
+  plats.forEach(p=> cols.push({ header: 'Estado ' + (p==='ios'?'iOS':'Android'), width:14 }));
+  cols.push({ header:'Observações', width:34 });
+  ws.columns = cols;
+
+  // ---- Header block ----
+  ws.mergeCells(1,1,1,cols.length);
+  ws.getCell(1,1).value = 'SMART IZI · CHECKLIST — ' + (session.modulo||'');
+  ws.getCell(1,1).font = { bold:true, size:14, color:{argb:'FFFFFFFF'} };
+  ws.getCell(1,1).fill = { type:'pattern', pattern:'solid', fgColor:{argb:FILL_HEADER} };
+  ws.getCell(1,1).alignment = { vertical:'middle', horizontal:'left' };
+  ws.getRow(1).height = 26;
+
+  const metaRows = [
+    ['Nome', session.meta.nome],
+    ['Data', session.meta.data],
+    ['Dispositivo', session.meta.dispositivo],
+    ['Âmbito / Versão', session.meta.versao],
+  ];
+  metaRows.forEach((mr, i)=>{
+    const r = 2+i;
+    ws.getCell(r,1).value = mr[0];
+    ws.getCell(r,1).font = { bold:true, color:{argb:'FF5A5568'} };
+    ws.getCell(r,1).border = { bottom:{style:'thin', color:{argb:'FFD3CEDE'}} };
+    ws.mergeCells(r,2,r,cols.length);
+    ws.getCell(r,2).value = mr[1] || '';
+    ws.getCell(r,2).border = { bottom:{style:'thin', color:{argb:'FFD3CEDE'}} };
+  });
+
+  // ---- Table header row (row 7) ----
+  const BORDER_ALL = { top:{style:'thin', color:{argb:'FF000000'}}, left:{style:'thin', color:{argb:'FF000000'}}, bottom:{style:'thin', color:{argb:'FF000000'}}, right:{style:'thin', color:{argb:'FF000000'}} };
+
+  const headerRowIdx = 7;
+  const headerRow = ws.getRow(headerRowIdx);
+  cols.forEach((c, idx)=>{
+    const cell = headerRow.getCell(idx+1);
+    cell.value = c.header;
+    cell.font = { bold:true, color:{argb:'FFFFFFFF'} };
+    cell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:FILL_BRAND} };
+    cell.alignment = { vertical:'middle', horizontal:'center', wrapText:true };
+    cell.border = BORDER_ALL;
+  });
+  headerRow.height = 24;
+
+  let rowIdx = headerRowIdx + 1;
+  const statusColStart = 3;
+  const obsCol = cols.length;
+
+  session.grupos.forEach(grupo=>{
+    // group title row
+    ws.mergeCells(rowIdx,1,rowIdx,cols.length);
+    const gCell = ws.getCell(rowIdx,1);
+    gCell.value = grupo.nome;
+    gCell.font = { bold:true, size:12, color:{argb:'FFFFFFFF'} };
+    gCell.fill = { type:'pattern', pattern:'solid', fgColor:{argb:FILL_HEADER} };
+    gCell.alignment = { vertical:'middle', horizontal:'left', indent:1 };
+    ws.getRow(rowIdx).eachCell({includeEmpty:true}, cell=>{ cell.border = BORDER_ALL; });
+    ws.getRow(rowIdx).height = 20;
+    rowIdx++;
+
+    grupo.subgrupos.forEach(sub=>{
+      const startRow = rowIdx;
+      sub.itens.forEach(item=>{
+        const row = ws.getRow(rowIdx);
+        row.getCell(1).value = sub.nome;
+        row.getCell(1).alignment = { vertical:'middle', horizontal:'center', wrapText:true };
+        row.getCell(1).font = { bold:true, size:11.5, color:{argb:'FF000000'} };
+        row.getCell(2).value = item.texto;
+        row.getCell(2).alignment = { vertical:'middle', wrapText:true };
+
+        plats.forEach((p, pi)=>{
+          const c = row.getCell(statusColStart+pi);
+          const st = item.status[p];
+          c.value = stateText(st);
+          c.alignment = { vertical:'middle', horizontal:'center' };
+          c.font = { bold:true, color:{argb:fontColorFor(st)} };
+          const fill = cellFillFor(st);
+          if(fill) c.fill = { type:'pattern', pattern:'solid', fgColor:{argb:fill} };
+        });
+
+        const oc = row.getCell(obsCol);
+        oc.value = item.obs || '';
+        oc.alignment = { vertical:'middle', wrapText:true };
+
+        row.eachCell({includeEmpty:true}, cell=>{
+          cell.border = BORDER_ALL;
+        });
+        rowIdx++;
+      });
+      if(rowIdx - 1 > startRow){
+        ws.mergeCells(startRow,1,rowIdx-1,1);
+      }
+    });
+  });
+
+  ws.getColumn(1).alignment = { vertical:'middle', wrapText:true };
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type:'application/octet-stream' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const safeVersao = (session.meta.versao || 'checklist').replace(/[\/\\?%*:|"<>]/g,'-');
+  a.href = url;
+  a.download = `Smart_IZI_Checklist_${safeVersao}_${session.meta.data}.xlsx`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+  toast('Excel gerado ✓ — pronto a anexar ao email.');
+}
+
+document.getElementById('btnExport').addEventListener('click', ()=>{
+  exportExcel().catch(err=>{
+    console.error(err);
+    toast('Erro ao gerar Excel — vê a consola.');
+  });
+});
+
+document.getElementById('freqModalOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'freqModalOverlay') e.target.classList.add('hidden');
+});
+</script>
+</body>
+</html>
