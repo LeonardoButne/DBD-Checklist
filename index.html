@@ -495,8 +495,8 @@ async function pollRemote(){
 function startPolling(){
   stopPolling();
   if(document.hidden) return; // não arranca já se a aba estiver em 2º plano — visibilitychange trata disso quando voltar
-  pollTimer = setInterval(pollRemote, 2500);
-  console.log('[sync] polling activo (a cada 2.5s)');
+  pollTimer = setInterval(pollRemote, 30000);
+  console.log('[sync] polling activo (a cada 30s)');
 }
 function stopPolling(){
   if(pollTimer) clearInterval(pollTimer);
