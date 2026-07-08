@@ -15,6 +15,7 @@ const { Redis } = require('@upstash/redis');
 const redis = Redis.fromEnv();
 
 const TTL_SECONDS = 60 * 60 * 24 * 120; // checklists expiram ao fim de 120 dias sem uso
+const KEY_PREFIX = 'smartizi-qa:checklist:'; // prefixo específico — evita colisões caso a base de dados seja partilhada com outro projecto Vercel
 
 function genId(){
   const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sem caracteres ambíguos
@@ -30,7 +31,7 @@ module.exports = async (req, res) => {
     if(req.method === 'GET'){
       const id = req.query.id;
       if(!id) return res.status(400).json({ error: 'Parâmetro "id" em falta.' });
-      const data = await redis.get(`checklist:${id}`);
+      const data = await redis.get(KEY_PREFIX + id);
       if(!data) return res.status(404).json({ error: 'Checklist não encontrada.' });
       return res.status(200).json(data);
     }
@@ -42,14 +43,14 @@ module.exports = async (req, res) => {
 
       let id = genId();
       let attempts = 0;
-      while(attempts < 5 && await redis.get(`checklist:${id}`)){
+      while(attempts < 5 && await redis.get(KEY_PREFIX + id)){
         id = genId();
         attempts++;
       }
 
       const updatedAt = Date.now();
       const payload = { id, session, updatedAt };
-      await redis.set(`checklist:${id}`, payload, { ex: TTL_SECONDS });
+      await redis.set(KEY_PREFIX + id, payload, { ex: TTL_SECONDS });
       return res.status(200).json(payload);
     }
 
@@ -62,7 +63,7 @@ module.exports = async (req, res) => {
 
       const updatedAt = Date.now();
       const payload = { id, session, updatedAt };
-      await redis.set(`checklist:${id}`, payload, { ex: TTL_SECONDS });
+      await redis.set(KEY_PREFIX + id, payload, { ex: TTL_SECONDS });
       return res.status(200).json(payload);
     }
 
