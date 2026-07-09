@@ -379,7 +379,7 @@ import {
 const firebaseConfig = {
   apiKey: "AIzaSyDqom9x57YA440f0JTHjo0HUyudD5jB79c",
   authDomain: "dbd-cheklist.firebaseapp.com",
-  databaseURL: "https://dbd-cheklist-default-rtdb.firebaseio.com/", // <-- substitui pelo URL do Realtime Database (Firebase Console → Realtime Database)
+  databaseURL: "https://dbd-cheklist-default-rtdb.firebaseio.com/",
   projectId: "dbd-cheklist",
   storageBucket: "dbd-cheklist.firebasestorage.app",
   messagingSenderId: "1054897298393",
@@ -418,9 +418,14 @@ function isSubActivo(s){ return s.activo !== false; }
 // (de antes desta correcção) que possam ter chegado incompletos do Firebase.
 function normalizeSession(s){
   if(!s || !Array.isArray(s.grupos)) return s;
+  if(!s.collapsed) s.collapsed = {}; // Firebase apaga objectos vazios ({}) — repõe sempre
+  if(!s.meta) s.meta = {};
+  if(!Array.isArray(s.meta.plataformas)) s.meta.plataformas = [];
   s.grupos.forEach(g=>{
-    (g.subgrupos||[]).forEach(sub=>{
-      (sub.itens||[]).forEach(it=>{
+    if(!Array.isArray(g.subgrupos)) g.subgrupos = []; // arrays vazios também são apagados pelo Firebase
+    g.subgrupos.forEach(sub=>{
+      if(!Array.isArray(sub.itens)) sub.itens = [];
+      sub.itens.forEach(it=>{
         if(!it.status) it.status = {};
         if(it.status.ios == null) it.status.ios = '';
         if(it.status.android == null) it.status.android = '';
