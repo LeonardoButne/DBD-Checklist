@@ -1,9 +1,6 @@
 {
   "name": "checklist-qa-smartizi",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "private": true,
-  "description": "Painel de checklist QA do SmartIZI (Lab Cartões) com partilha e sincronização em tempo real entre a equipa.",
-  "dependencies": {
-    "@upstash/redis": "^1.34.0"
-  }
+  "description": "Painel de checklist QA do SmartIZI (Lab Cartões) com partilha e sincronização em tempo real (Firebase Realtime Database)."
 }
