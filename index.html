@@ -379,7 +379,7 @@ import {
 const firebaseConfig = {
   apiKey: "AIzaSyDqom9x57YA440f0JTHjo0HUyudD5jB79c",
   authDomain: "dbd-cheklist.firebaseapp.com",
-  databaseURL: "https://dbd-cheklist-default-rtdb.firebaseio.com/", // <-- substitui pelo URL do Realtime Database (Firebase Console → Realtime Database)
+  databaseURL: "COLOCA_AQUI_O_TEU_DATABASE_URL", // <-- substitui pelo URL do Realtime Database (Firebase Console → Realtime Database)
   projectId: "dbd-cheklist",
   storageBucket: "dbd-cheklist.firebasestorage.app",
   messagingSenderId: "1054897298393",
@@ -408,11 +408,28 @@ const LS_SESSION  = 'szqa_session_v1';
 const LS_FREQOBS  = 'szqa_freqobs_v1';
 const LS_LASTNOME = 'szqa_lastnome_v1';
 
-const STATE_CYCLE = [null, 'OK', 'NOTOK', 'NA'];
+const STATE_CYCLE = ['', 'OK', 'NOTOK', 'NA']; // '' = por testar. NUNCA usar null: o Firebase apaga campos com valor null.
 // Categorias/subcategorias criadas antes desta funcionalidade não têm o campo
 // "activo" — tratamos ausência como "activo" (incluído no Excel).
 function isGrupoActivo(g){ return g.activo !== false; }
 function isSubActivo(s){ return s.activo !== false; }
+// Garante que todos os itens têm um objecto "status" válido com ios/android
+// definidos (string, nunca null/undefined) — protege contra dados antigos
+// (de antes desta correcção) que possam ter chegado incompletos do Firebase.
+function normalizeSession(s){
+  if(!s || !Array.isArray(s.grupos)) return s;
+  s.grupos.forEach(g=>{
+    (g.subgrupos||[]).forEach(sub=>{
+      (sub.itens||[]).forEach(it=>{
+        if(!it.status) it.status = {};
+        if(it.status.ios == null) it.status.ios = '';
+        if(it.status.android == null) it.status.android = '';
+        if(it.obs == null) it.obs = '';
+      });
+    });
+  });
+  return s;
+}
 const STATE_LABEL = { OK:'OK', NOTOK:'NOT OK', NA:'N/A' };
 
 let session = null;      // active checklist in memory
@@ -509,7 +526,7 @@ function attachRealtimeListener(id){
     const remote = snapshot.val();
     if(!remote) return;
     if(isUserTyping()) return; // não interromper quem está a escrever agora
-    session = remote;
+    session = normalizeSession(remote);
     session.id = id;
     localStorage.setItem(LS_SESSION, JSON.stringify(session));
     renderApp();
@@ -533,7 +550,7 @@ document.addEventListener('focusout', (e)=>{
     const remote = snap.val();
     if(!remote) return;
     remote.id = session.id;
-    session = remote;
+    session = normalizeSession(remote);
     localStorage.setItem(LS_SESSION, JSON.stringify(session));
     renderApp();
   }).catch(()=>{});
@@ -574,7 +591,7 @@ async function loadSharedChecklist(id){
   try{
     const snap = await fbGet(fbRef(db, 'checklists/' + id));
     if(!snap.exists()) throw new Error('not found');
-    session = snap.val();
+    session = normalizeSession(snap.val());
     session.id = id;
     localStorage.setItem(LS_SESSION, JSON.stringify(session));
     editMode = false;
@@ -942,7 +959,7 @@ if(urlChecklistId){
     document.getElementById('resumeBanner').classList.remove('hidden');
   }
   document.getElementById('btnResume').addEventListener('click', ()=>{
-    session = existing;
+    session = normalizeSession(existing);
     editMode = false;
     showMain();
     if(session && session.id){
@@ -985,7 +1002,7 @@ document.getElementById('btnStart').addEventListener('click', async ()=>{
       id: s.id, nome: s.nome, activo: s.activo !== false,
       itens: s.itens.map(it => ({
         id: it.id, texto: it.texto,
-        status: { ios: null, android: null },
+        status: { ios: '', android: '' },
         obs: ''
       }))
     }))
@@ -1003,6 +1020,7 @@ document.getElementById('btnStart').addEventListener('click', async ()=>{
     grupos,
     collapsed: {}
   };
+  normalizeSession(session);
   editMode = false;
   showMain();
   openShareModal();
@@ -1151,7 +1169,7 @@ function markAllStatus(plat, status){
     ? `Marcar todos os itens como OK em ${label}? Isto substitui os estados actuais dessa plataforma.`
     : `Desmarcar todos os itens em ${label} (voltam a "por testar")? Isto substitui os estados actuais dessa plataforma.`;
   if(!confirm(msg)) return;
-  allItems().forEach(it => { it.status[plat] = status; });
+  allItems().forEach(it => { if(!it.status) it.status = { ios:'', android:'' }; it.status[plat] = status; });
   persistSession();
   renderApp();
   toast(status ? `Todos os itens marcados como OK (${label}) ✓` : `Todos os itens desmarcados (${label}) ✓`);
@@ -1163,13 +1181,13 @@ function renderMarkAllButtons(){
   const items = allItems();
   session.meta.plataformas.forEach(plat=>{
     const label = plat==='ios' ? 'iOS' : 'Android';
-    const hasMarcacoes = items.some(it => it.status[plat] !== null && it.status[plat] !== undefined);
+    const hasMarcacoes = items.some(it => it.status && it.status[plat]);
 
     const btn = document.createElement('button');
     btn.className = 'icon-btn';
     if(hasMarcacoes){
       btn.textContent = `↺ Desmarcar tudo · ${label}`;
-      btn.addEventListener('click', ()=>markAllStatus(plat, null));
+      btn.addEventListener('click', ()=>markAllStatus(plat, ''));
     } else {
       btn.textContent = `✓ Marcar tudo OK · ${label}`;
       btn.addEventListener('click', ()=>markAllStatus(plat, 'OK'));
@@ -1391,7 +1409,7 @@ function renderApp(){
         addBtn.className = 'add-link';
         addBtn.textContent = '+ Adicionar item a "' + sub.nome + '"';
         addBtn.addEventListener('click', ()=>{
-          sub.itens.push({ id: uid('i'), texto: 'Novo item a verificar...', status:{ios:null,android:null}, obs:'' });
+          sub.itens.push({ id: uid('i'), texto: 'Novo item a verificar...', status:{ios:'',android:''}, obs:'' });
           persistSession(); renderApp();
         });
         addRow.appendChild(addBtn);
