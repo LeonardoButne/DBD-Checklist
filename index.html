@@ -121,6 +121,13 @@ input,textarea,select{font-family:inherit;font-size:14px;}
 .grupo-header .grupo-count{font-size:12px;opacity:.85;font-weight:500;}
 .grupo-header .chev{transition:.2s;font-size:13px;}
 .grupo.collapsed .grupo-header .chev{transform:rotate(-90deg);}
+.grupo.excluido{opacity:.6;}
+.grupo.excluido .grupo-header{background:linear-gradient(135deg,#8B8798,#5F5B6E);}
+.subgrupo.excluido{opacity:.5;}
+.incl-toggle{font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:12px;border:1px solid rgba(255,255,255,.55);background:rgba(255,255,255,.14);color:#fff;white-space:nowrap;flex-shrink:0;}
+.incl-toggle.off{background:rgba(0,0,0,.18);border-color:rgba(255,255,255,.3);}
+.incl-toggle.light{border:1px solid var(--border-strong);background:var(--surface);color:var(--text-muted);}
+.incl-toggle.light.off{background:var(--pending-bg);color:var(--text-faint);}
 .grupo-body{padding:6px 0;}
 .grupo.collapsed .grupo-body{display:none;}
 
@@ -357,7 +364,30 @@ input,textarea,select{font-family:inherit;font-size:14px;}
 
 <div class="toast" id="toast"></div>
 
-<script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js';
+import {
+  getDatabase,
+  ref as fbRef,
+  set as fbSet,
+  get as fbGet,
+  onValue as fbOnValue,
+  off as fbOff
+} from 'https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js';
+
+// Configuração do projecto Firebase (DBD · Checklist QA)
+const firebaseConfig = {
+  apiKey: "AIzaSyDqom9x57YA440f0JTHjo0HUyudD5jB79c",
+  authDomain: "dbd-cheklist.firebaseapp.com",
+  databaseURL: "https://dbd-cheklist-default-rtdb.firebaseio.com/", // <-- substitui pelo URL do Realtime Database (Firebase Console → Realtime Database)
+  projectId: "dbd-cheklist",
+  storageBucket: "dbd-cheklist.firebasestorage.app",
+  messagingSenderId: "1054897298393",
+  appId: "1:1054897298393:web:79272c41c88394e91097c8"
+};
+const fbApp = initializeApp(firebaseConfig);
+const db = getDatabase(fbApp);
+
 /* =====================================================
    DADOS BASE
 ===================================================== */
@@ -379,6 +409,10 @@ const LS_FREQOBS  = 'szqa_freqobs_v1';
 const LS_LASTNOME = 'szqa_lastnome_v1';
 
 const STATE_CYCLE = [null, 'OK', 'NOTOK', 'NA'];
+// Categorias/subcategorias criadas antes desta funcionalidade não têm o campo
+// "activo" — tratamos ausência como "activo" (incluído no Excel).
+function isGrupoActivo(g){ return g.activo !== false; }
+function isSubActivo(s){ return s.activo !== false; }
 const STATE_LABEL = { OK:'OK', NOTOK:'NOT OK', NA:'N/A' };
 
 let session = null;      // active checklist in memory
@@ -423,11 +457,13 @@ function clearSession(){
 }
 
 /* =====================================================
-   SINCRONIZAÇÃO REMOTA (partilha entre colegas)
+   SINCRONIZAÇÃO REMOTA (partilha entre colegas) — Firebase Realtime Database
+   Em vez de perguntar "mudou alguma coisa?" a cada X segundos (polling),
+   subscrevemo-nos ao caminho da checklist e o Firebase empurra a alteração
+   assim que ela acontece — sem custo por verificação e sem atraso.
 ===================================================== */
-let lastSyncedAt = 0;      // timestamp da última versão que já temos (nossa ou recebida)
 let saveTimer = null;
-let pollTimer = null;
+let checklistRef = null; // referência activa do listener em tempo real
 
 function setSyncStatus(kind, text){
   const el = document.getElementById('syncStatus');
@@ -442,21 +478,15 @@ function persistSession(){
   if(session.id){
     setSyncStatus('saving', 'a guardar...');
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(pushToServer, 500);
+    saveTimer = setTimeout(pushToFirebase, 400);
   }
 }
 
-async function pushToServer(){
+async function pushToFirebase(){
   if(!session || !session.id) return;
   try{
-    const res = await fetch('/api/checklist?id=' + encodeURIComponent(session.id), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session })
-    });
-    if(!res.ok) throw new Error('save failed');
-    const data = await res.json();
-    lastSyncedAt = data.updatedAt || Date.now();
+    const clean = JSON.parse(JSON.stringify(session)); // remove undefined (Firebase não aceita)
+    await fbSet(fbRef(db, 'checklists/' + session.id), clean);
     setSyncStatus('live', 'sincronizado');
   }catch(e){
     console.error('push error', e);
@@ -472,64 +502,65 @@ function isUserTyping(){
   return false;
 }
 
-async function pollRemote(){
-  if(!session || !session.id) return;
-  if(isUserTyping()) return; // não interromper quem está a escrever
-  console.log('[sync] a verificar actualizações...', new Date().toLocaleTimeString());
-  try{
-    const res = await fetch('/api/checklist?id=' + encodeURIComponent(session.id));
-    if(!res.ok) return;
-    const data = await res.json();
-    if(!data || !data.session) return;
-    if(data.updatedAt && data.updatedAt <= lastSyncedAt) return; // nada de novo
-    session = data.session;
-    session.id = data.id;
-    lastSyncedAt = data.updatedAt;
+function attachRealtimeListener(id){
+  detachRealtimeListener();
+  checklistRef = fbRef(db, 'checklists/' + id);
+  fbOnValue(checklistRef, (snapshot)=>{
+    const remote = snapshot.val();
+    if(!remote) return;
+    if(isUserTyping()) return; // não interromper quem está a escrever agora
+    session = remote;
+    session.id = id;
     localStorage.setItem(LS_SESSION, JSON.stringify(session));
     renderApp();
-    setSyncStatus('live', 'actualizado agora');
-  }catch(e){
-    console.error('poll error', e);
-  }
+    setSyncStatus('live', 'sincronizado');
+  }, (err)=>{
+    console.error('listener error', err);
+    setSyncStatus('error', 'falha na ligação em tempo real');
+  });
 }
-function startPolling(){
-  stopPolling();
-  if(document.hidden) return; // não arranca já se a aba estiver em 2º plano — visibilitychange trata disso quando voltar
-  pollTimer = setInterval(pollRemote, 30000);
-  console.log('[sync] polling activo (a cada 30s)');
+function detachRealtimeListener(){
+  if(checklistRef){ fbOff(checklistRef); checklistRef = null; }
 }
-function stopPolling(){
-  if(pollTimer) clearInterval(pollTimer);
-  pollTimer = null;
-}
-
-// Pausa o polling quando a aba fica em 2º plano (poupa chamadas desnecessárias
-// à API/Redis) e retoma — com uma actualização imediata — quando volta ao foco.
-document.addEventListener('visibilitychange', ()=>{
+// Se a pessoa estava a escrever quando chegou uma actualização remota, essa
+// actualização foi ignorada de propósito (para não apagar o que escrevia).
+// Assim que sai do campo, vamos buscar manualmente o estado mais recente.
+document.addEventListener('focusout', (e)=>{
   if(!session || !session.id) return;
-  if(document.hidden){
-    stopPolling();
-    console.log('[sync] aba em 2º plano — polling em pausa');
-    setSyncStatus('paused', 'em pausa (aba em 2º plano)');
-  } else {
-    console.log('[sync] aba voltou ao foco — a actualizar e a retomar polling');
-    pollRemote();
-    startPolling();
-  }
+  const isTextField = e.target && (e.target.tagName === 'TEXTAREA' || (e.target.tagName === 'INPUT' && (e.target.type === 'text' || e.target.type === 'date')));
+  if(!isTextField) return;
+  fbGet(fbRef(db, 'checklists/' + session.id)).then(snap=>{
+    const remote = snap.val();
+    if(!remote) return;
+    remote.id = session.id;
+    session = remote;
+    localStorage.setItem(LS_SESSION, JSON.stringify(session));
+    renderApp();
+  }).catch(()=>{});
 });
+
+function genChecklistId(){
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789'; // sem caracteres ambíguos
+  let out = '';
+  for(let i = 0; i < 6; i++) out += chars[Math.floor(Math.random() * chars.length)];
+  return 'CHK-' + out;
+}
 
 async function createSharedChecklist(){
   try{
-    const res = await fetch('/api/checklist', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ session })
-    });
-    if(!res.ok) throw new Error('create failed');
-    const data = await res.json();
-    session.id = data.id;
-    lastSyncedAt = data.updatedAt || Date.now();
+    let id = genChecklistId();
+    let tries = 0;
+    while(tries < 5){
+      const snap = await fbGet(fbRef(db, 'checklists/' + id));
+      if(!snap.exists()) break;
+      id = genChecklistId();
+      tries++;
+    }
+    session.id = id;
+    const clean = JSON.parse(JSON.stringify(session));
+    await fbSet(fbRef(db, 'checklists/' + id), clean);
     setSyncStatus('live', 'sincronizado');
+    attachRealtimeListener(id);
   }catch(e){
     console.error('create error', e);
     setSyncStatus('error', 'sem ligação — a guardar só neste computador');
@@ -541,16 +572,14 @@ async function createSharedChecklist(){
 async function loadSharedChecklist(id){
   toast('A carregar checklist partilhada...');
   try{
-    const res = await fetch('/api/checklist?id=' + encodeURIComponent(id));
-    if(!res.ok) throw new Error('not found');
-    const data = await res.json();
-    session = data.session;
-    session.id = data.id;
-    lastSyncedAt = data.updatedAt || Date.now();
+    const snap = await fbGet(fbRef(db, 'checklists/' + id));
+    if(!snap.exists()) throw new Error('not found');
+    session = snap.val();
+    session.id = id;
     localStorage.setItem(LS_SESSION, JSON.stringify(session));
     editMode = false;
     showMain();
-    startPolling();
+    attachRealtimeListener(id);
     setSyncStatus('live', 'sincronizado');
   }catch(e){
     console.error(e);
@@ -917,8 +946,7 @@ if(urlChecklistId){
     editMode = false;
     showMain();
     if(session && session.id){
-      lastSyncedAt = 0;
-      startPolling();
+      attachRealtimeListener(session.id);
       setSyncStatus('live', 'sincronizado');
     }
   });
@@ -952,9 +980,9 @@ document.getElementById('btnStart').addEventListener('click', async ()=>{
   if(chkAndroid.checked) plataformas.push('android');
 
   const grupos = tpl.grupos.map(g => ({
-    id: g.id, nome: g.nome,
+    id: g.id, nome: g.nome, activo: g.activo !== false,
     subgrupos: g.subgrupos.map(s => ({
-      id: s.id, nome: s.nome,
+      id: s.id, nome: s.nome, activo: s.activo !== false,
       itens: s.itens.map(it => ({
         id: it.id, texto: it.texto,
         status: { ios: null, android: null },
@@ -983,7 +1011,6 @@ document.getElementById('btnStart').addEventListener('click', async ()=>{
     document.getElementById('shareLinkInput').value = shareUrlFor(session.id);
     document.getElementById('shareCreatingMsg').classList.add('hidden');
     history.replaceState(null, '', location.pathname + '?id=' + encodeURIComponent(session.id));
-    startPolling();
   }
 });
 
@@ -1043,7 +1070,7 @@ function showSetup(){
 }
 document.getElementById('btnNewChecklist').addEventListener('click', ()=>{
   if(!confirm('Começar uma nova checklist? Isto não apaga a checklist partilhada actual (os colegas continuam a vê-la), só sais dela para começar outra.')) return;
-  stopPolling();
+  detachRealtimeListener();
   clearSession();
   selectedDevices = [];
   renderDeviceChips();
@@ -1057,9 +1084,9 @@ document.getElementById('btnSaveTemplate').addEventListener('click', ()=>{
   const tpl = {
     modulo: session.modulo,
     grupos: session.grupos.map(g=>({
-      id:g.id, nome:g.nome,
+      id:g.id, nome:g.nome, activo: g.activo !== false,
       subgrupos: g.subgrupos.map(s=>({
-        id:s.id, nome:s.nome,
+        id:s.id, nome:s.nome, activo: s.activo !== false,
         itens: s.itens.map(it=>({id:it.id, texto:it.texto}))
       }))
     }))
@@ -1180,8 +1207,9 @@ function renderApp(){
   cont.innerHTML = '';
 
   session.grupos.forEach(grupo=>{
+    const gAtivo = isGrupoActivo(grupo);
     const gEl = document.createElement('div');
-    gEl.className = 'grupo' + (session.collapsed[grupo.id] ? ' collapsed' : '');
+    gEl.className = 'grupo' + (session.collapsed[grupo.id] ? ' collapsed' : '') + (gAtivo ? '' : ' excluido');
 
     const itemCount = grupo.subgrupos.reduce((a,s)=>a+s.itens.length,0);
     const header = document.createElement('div');
@@ -1189,8 +1217,14 @@ function renderApp(){
     header.innerHTML = `
       <h2>${editMode ? '' : escapeHtml(grupo.nome)}</h2>
       <span class="grupo-count">${itemCount} itens</span>
+      <button class="incl-toggle${gAtivo ? '' : ' off'}" title="Incluir ou excluir esta categoria do Excel exportado (fica sempre visível e editável aqui na app)">${gAtivo ? '✓ No Excel' : '✕ Fora do Excel'}</button>
       <span class="chev">▾</span>
     `;
+    header.querySelector('.incl-toggle').addEventListener('click', (e)=>{
+      e.stopPropagation();
+      grupo.activo = !gAtivo;
+      persistSession(); renderApp();
+    });
     if(editMode){
       const h2 = header.querySelector('h2');
       const inp = document.createElement('input');
@@ -1224,21 +1258,30 @@ function renderApp(){
     body.className = 'grupo-body';
 
     grupo.subgrupos.forEach(sub=>{
+      const sAtivo = isSubActivo(sub);
       const sEl = document.createElement('div');
-      sEl.className = 'subgrupo';
+      sEl.className = 'subgrupo' + (sAtivo ? '' : ' excluido');
       const sHeader = document.createElement('div');
       sHeader.className = 'subgrupo-header';
       if(editMode){
-        sHeader.innerHTML = `<input type="text" class="edit-name" value="${escapeAttr(sub.nome)}"><button class="tool-btn" title="Remover subgrupo">✕</button>`;
+        sHeader.innerHTML = `<input type="text" class="edit-name" value="${escapeAttr(sub.nome)}"><div style="display:flex;gap:8px;align-items:center;flex-shrink:0;"><button class="incl-toggle light${sAtivo ? '' : ' off'}" title="Incluir ou excluir esta subcategoria do Excel exportado">${sAtivo ? '✓ No Excel' : '✕ Fora do Excel'}</button><button class="tool-btn" title="Remover subgrupo">✕</button></div>`;
         sHeader.querySelector('input').addEventListener('input', (e)=>{ sub.nome = e.target.value; persistSession(); });
-        sHeader.querySelector('button').addEventListener('click', ()=>{
+        sHeader.querySelector('.incl-toggle').addEventListener('click', ()=>{
+          sub.activo = !sAtivo;
+          persistSession(); renderApp();
+        });
+        sHeader.querySelector('.tool-btn').addEventListener('click', ()=>{
           if(confirm(`Remover "${sub.nome}" e os seus itens?`)){
             grupo.subgrupos = grupo.subgrupos.filter(s=>s.id!==sub.id);
             persistSession(); renderApp();
           }
         });
       } else {
-        sHeader.innerHTML = `<h3>${escapeHtml(sub.nome)}</h3>`;
+        sHeader.innerHTML = `<h3>${escapeHtml(sub.nome)}</h3><button class="incl-toggle light${sAtivo ? '' : ' off'}" title="Incluir ou excluir esta subcategoria do Excel exportado">${sAtivo ? '✓ No Excel' : '✕ Fora do Excel'}</button>`;
+        sHeader.querySelector('.incl-toggle').addEventListener('click', ()=>{
+          sub.activo = !sAtivo;
+          persistSession(); renderApp();
+        });
       }
       sEl.appendChild(sHeader);
 
@@ -1365,7 +1408,7 @@ function renderApp(){
       addSubBtn.className = 'add-link';
       addSubBtn.textContent = '+ Adicionar subcategoria';
       addSubBtn.addEventListener('click', ()=>{
-        grupo.subgrupos.push({ id: uid('s'), nome: 'Nova subcategoria', itens: [] });
+        grupo.subgrupos.push({ id: uid('s'), nome: 'Nova subcategoria', itens: [], activo: true });
         persistSession(); renderApp();
       });
       addSubRow.appendChild(addSubBtn);
@@ -1380,7 +1423,7 @@ function renderApp(){
 }
 
 document.getElementById('btnAddGrupo').addEventListener('click', ()=>{
-  session.grupos.push({ id: uid('g'), nome: 'Nova categoria', subgrupos: [{id: uid('s'), nome:'Nova subcategoria', itens:[]}] });
+  session.grupos.push({ id: uid('g'), nome: 'Nova categoria', activo: true, subgrupos: [{id: uid('s'), nome:'Nova subcategoria', itens:[], activo: true}] });
   persistSession(); renderApp();
 });
 
@@ -1484,6 +1527,10 @@ async function exportExcel(){
   const obsCol = cols.length;
 
   session.grupos.forEach(grupo=>{
+    if(!isGrupoActivo(grupo)) return; // categoria marcada como "Fora do Excel" — não sai no ficheiro
+    const subgruposIncluidos = grupo.subgrupos.filter(isSubActivo);
+    if(subgruposIncluidos.length === 0) return; // nada a mostrar desta categoria
+
     // group title row
     ws.mergeCells(rowIdx,1,rowIdx,cols.length);
     const gCell = ws.getCell(rowIdx,1);
@@ -1495,7 +1542,7 @@ async function exportExcel(){
     ws.getRow(rowIdx).height = 20;
     rowIdx++;
 
-    grupo.subgrupos.forEach(sub=>{
+    subgruposIncluidos.forEach(sub=>{
       const startRow = rowIdx;
       sub.itens.forEach(item=>{
         const row = ws.getRow(rowIdx);
@@ -1543,7 +1590,10 @@ async function exportExcel(){
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-  toast('Excel gerado ✓ — pronto a anexar ao email.');
+  const gruposExcluidos = session.grupos.filter(g=>!isGrupoActivo(g)).length;
+  const subsExcluidos = session.grupos.reduce((a,g)=> a + g.subgrupos.filter(s=>isGrupoActivo(g) && !isSubActivo(s)).length, 0);
+  const totalExcluidos = gruposExcluidos + subsExcluidos;
+  toast('Excel gerado ✓ — pronto a anexar ao email.' + (totalExcluidos > 0 ? ` (${totalExcluidos} secção(ões) ficaram fora)` : ''));
 }
 
 document.getElementById('btnExport').addEventListener('click', ()=>{
