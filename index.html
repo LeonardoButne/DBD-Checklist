@@ -133,7 +133,7 @@ input,textarea,select{font-family:inherit;font-size:14px;}
 
 .subgrupo{border-top:1px solid var(--border);}
 .subgrupo:first-child{border-top:none;}
-.subgrupo-header{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:#2e2e2e;;gap:10px;}
+.subgrupo-header{display:flex;align-items:center;justify-content:space-between;padding:10px 18px;background:#2e2e2e;gap:10px;}
 .subgrupo-header h3{font-size:12.5px;margin:0;text-transform:uppercase;letter-spacing:.03em;color:#ffffff;font-weight:700;}
 .subgrupo-header input.edit-name{font-size:12.5px;text-transform:uppercase;letter-spacing:.03em;color:var(--text-muted);font-weight:700;border:1px dashed var(--border-strong);border-radius:6px;padding:4px 6px;background:#fff;width:220px;}
 
@@ -175,6 +175,21 @@ input,textarea,select{font-family:inherit;font-size:14px;}
 
 /* Modal */
 .modal-overlay{position:fixed;inset:0;background:rgba(33,29,43,.45);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.drawer-overlay{position:fixed;inset:0;background:rgba(33,29,43,.35);z-index:110;}
+.drawer{position:absolute;top:0;right:0;height:100%;width:380px;max-width:92vw;background:var(--surface);box-shadow:-10px 0 30px rgba(33,29,43,.18);display:flex;flex-direction:column;}
+.drawer-header{padding:20px 18px 14px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+.drawer-header h2{margin:0;font-size:17px;}
+.drawer-search{padding:12px 18px;border-bottom:1px solid var(--border);}
+.drawer-search input{width:100%;padding:9px 12px;border:1.5px solid var(--border-strong);border-radius:8px;background:var(--surface-alt);}
+.drawer-search input:focus{outline:none;border-color:var(--brand);background:#fff;}
+.drawer-body{flex:1;overflow-y:auto;padding:12px 14px;}
+.history-item{display:block;width:100%;text-align:left;background:var(--surface-alt);border:1.5px solid var(--border);border-radius:10px;padding:12px 14px;margin-bottom:8px;}
+.history-item:hover{border-color:var(--brand);background:var(--brand-tint);}
+.history-item.current{border-color:var(--brand);background:var(--brand-tint);}
+.history-item-top{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--text-muted);margin-bottom:4px;}
+.history-versao{font-weight:700;color:var(--brand-dark);}
+.history-nome{font-size:13.5px;font-weight:600;color:var(--text);}
+.history-dispositivo{font-size:12px;color:var(--text-muted);margin-top:2px;}
 .modal{background:var(--surface);border-radius:var(--radius);max-width:480px;width:100%;max-height:82vh;overflow-y:auto;padding:26px;box-shadow:var(--shadow);}
 .modal h2{margin:0 0 4px;font-size:18px;}
 .modal p.sub{color:var(--text-muted);font-size:13px;margin:0 0 18px;}
@@ -254,6 +269,7 @@ input,textarea,select{font-family:inherit;font-size:14px;}
 
     <div class="setup-actions">
       <button class="btn btn-primary" id="btnStart">Começar checklist →</button>
+      <button class="btn btn-ghost" id="btnHistorySetup">📋 Checklists anteriores</button>
       <button class="btn btn-ghost" id="btnManageFreq">Gerir observações frequentes</button>
     </div>
 
@@ -276,6 +292,7 @@ input,textarea,select{font-family:inherit;font-size:14px;}
           <span class="sync-status" id="syncStatus"></span>
         </div>
         <div class="topbar-actions">
+          <button class="icon-btn" id="btnHistoryTop">📋 Anteriores</button>
           <button class="icon-btn primary" id="btnShare">🔗 Partilhar</button>
           <button class="icon-btn" id="btnEditMeta">✏️ Nome/Dispositivos</button>
           <button class="icon-btn" id="btnFreqModal">🏷 Observações</button>
@@ -358,6 +375,25 @@ input,textarea,select{font-family:inherit;font-size:14px;}
     </div>
     <div class="setup-actions">
       <button class="btn btn-primary" id="saveEditMetaBtn">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============ HISTORY DRAWER (checklists anteriores) ============ -->
+<div id="historyDrawerOverlay" class="drawer-overlay hidden">
+  <div class="drawer">
+    <div class="drawer-header">
+      <div>
+        <h2>Checklists anteriores</h2>
+        <p class="sub" style="margin:2px 0 0;">Clica numa para voltar a abrir e editar.</p>
+      </div>
+      <button class="modal-close tool-btn" id="closeHistoryDrawer">✕</button>
+    </div>
+    <div class="drawer-search">
+      <input type="text" id="historySearch" placeholder="Procurar por nome, versão, dispositivo...">
+    </div>
+    <div class="drawer-body" id="historyList">
+      <p class="sub">A carregar...</p>
     </div>
   </div>
 </div>
@@ -734,6 +770,83 @@ document.getElementById('saveEditMetaBtn').addEventListener('click', ()=>{
   toast('Nome(s) e dispositivo(s) actualizados ✓');
 });
 
+/* =====================================================
+   CHECKLISTS ANTERIORES (painel lateral)
+===================================================== */
+let historyFullList = [];
+
+async function openHistoryDrawer(){
+  document.getElementById('historyDrawerOverlay').classList.remove('hidden');
+  document.getElementById('historySearch').value = '';
+  const wrap = document.getElementById('historyList');
+  wrap.innerHTML = '<p class="sub">A carregar...</p>';
+  try{
+    const snap = await fbGet(fbRef(db, 'checklists'));
+    const data = snap.val() || {};
+    historyFullList = Object.keys(data).map(id=>{
+      const c = data[id] || {};
+      const meta = c.meta || {};
+      return {
+        id,
+        nome: meta.nome || '(sem nome)',
+        data: meta.data || '',
+        versao: meta.versao || '(sem versão)',
+        dispositivo: meta.dispositivo || '',
+        criadoEm: c.criadoEm || 0
+      };
+    });
+    historyFullList.sort((a,b)=> (b.criadoEm||0) - (a.criadoEm||0) || (b.data||'').localeCompare(a.data||''));
+    renderHistoryList();
+  }catch(e){
+    console.error('history load error', e);
+    wrap.innerHTML = '<p class="sub">Não foi possível carregar a lista.</p>';
+  }
+}
+
+function renderHistoryList(){
+  const q = (document.getElementById('historySearch').value || '').trim().toLowerCase();
+  const wrap = document.getElementById('historyList');
+  const filtered = !q ? historyFullList : historyFullList.filter(c =>
+    (c.nome + ' ' + c.versao + ' ' + c.dispositivo + ' ' + c.data).toLowerCase().includes(q)
+  );
+  if(filtered.length === 0){
+    wrap.innerHTML = '<p class="sub">Nenhuma checklist encontrada.</p>';
+    return;
+  }
+  wrap.innerHTML = '';
+  filtered.forEach(c=>{
+    const isCurrent = session && session.id === c.id;
+    const item = document.createElement('button');
+    item.className = 'history-item' + (isCurrent ? ' current' : '');
+    item.innerHTML = `
+      <div class="history-item-top">
+        <span class="history-versao">${escapeHtml(c.versao)}</span>
+        <span>${escapeHtml(c.data)}</span>
+      </div>
+      <div class="history-nome">${escapeHtml(c.nome)}</div>
+      <div class="history-dispositivo">${escapeHtml(c.dispositivo)}${isCurrent ? ' · a ver agora' : ''}</div>
+    `;
+    item.addEventListener('click', ()=>{
+      document.getElementById('historyDrawerOverlay').classList.add('hidden');
+      if(isCurrent) return;
+      history.replaceState(null, '', location.pathname + '?id=' + encodeURIComponent(c.id));
+      loadSharedChecklist(c.id);
+    });
+    wrap.appendChild(item);
+  });
+}
+
+document.getElementById('historySearch').addEventListener('input', renderHistoryList);
+document.getElementById('btnHistorySetup').addEventListener('click', openHistoryDrawer);
+document.getElementById('btnHistoryTop').addEventListener('click', openHistoryDrawer);
+document.getElementById('closeHistoryDrawer').addEventListener('click', ()=>{
+  document.getElementById('historyDrawerOverlay').classList.add('hidden');
+});
+document.getElementById('historyDrawerOverlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'historyDrawerOverlay') e.target.classList.add('hidden');
+});
+
+
 let freqObs = loadFreqObs();
 
 /* =====================================================
@@ -1023,7 +1136,8 @@ document.getElementById('btnStart').addEventListener('click', async ()=>{
     },
     modulo: tpl.modulo,
     grupos,
-    collapsed: {}
+    collapsed: {},
+    criadoEm: Date.now()
   };
   normalizeSession(session);
   editMode = false;
