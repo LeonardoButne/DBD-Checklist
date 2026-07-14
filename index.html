@@ -96,7 +96,7 @@ input,textarea,select{font-family:inherit;font-size:14px;}
 .icon-btn.primary{background:var(--brand);border-color:var(--brand);color:#fff;}
 .icon-btn.primary:hover{background:var(--brand-dark);}
 
-.summary-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;}
+.summary-bar{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
 .summary-chip{flex:1;min-width:120px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
 .summary-chip .num{font-family:'Sora';font-weight:700;font-size:22px;line-height:1;}
 .summary-chip .lbl{font-size:11.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.03em;margin-top:4px;}
@@ -104,7 +104,7 @@ input,textarea,select{font-family:inherit;font-size:14px;}
 .summary-chip.notok .num{color:var(--notok);}
 .summary-chip.na .num{color:var(--na);}
 .summary-chip.pending .num{color:var(--text-faint);}
-.progress-track{height:6px;border-radius:4px;background:var(--pending-bg);overflow:hidden;display:flex;margin-bottom:24px;border:1px solid var(--border);}
+.progress-track{height:6px;border-radius:4px;background:var(--pending-bg);overflow:hidden;display:flex;margin-top:14px;border:1px solid var(--border);}
 .progress-track div{height:100%;}
 
 .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
@@ -296,16 +296,15 @@ input,textarea,select{font-family:inherit;font-size:14px;}
           <button class="icon-btn primary" id="btnShare">🔗 Partilhar</button>
           <button class="icon-btn" id="btnEditMeta">✏️ Nome/Dispositivos</button>
           <button class="icon-btn" id="btnFreqModal">🏷 Observações</button>
-          <button class="icon-btn" id="btnSaveTemplate">💾 Guardar como template</button>
+          <button class="icon-btn" id="btnSaveTemplate">💾 Guardar template</button>
           <button class="icon-btn" id="btnNewChecklist">↺ Nova checklist</button>
-          <button class="icon-btn primary" id="btnExport">⬇ Exportar Excel</button>
+          <button class="icon-btn primary" id="btnExport">⬇ Exportar</button>
         </div>
       </div>
+      <div class="summary-bar" id="summaryBar"></div>
+      <div class="progress-track" id="progressTrack"></div>
     </div>
   </div>
-
-  <div class="summary-bar" id="summaryBar"></div>
-  <div class="progress-track" id="progressTrack"></div>
 
   <div class="toolbar">
     <div class="toolbar-left" id="toolbarLeft">
