@@ -2259,7 +2259,7 @@ function flashItemRow(itemId){
   el.classList.remove('flash-highlight');
   void el.offsetWidth; // força reflow para reiniciar a animação mesmo que já tenha a classe
   el.classList.add('flash-highlight');
-  setTimeout(()=>el.classList.remove('flash-highlight'), 1500);
+  setTimeout(()=>el.classList.remove('flash-highlight'), 2500);
 }
 
 function scrollToStatus(statusCode){
